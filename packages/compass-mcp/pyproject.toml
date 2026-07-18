@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compass-mcp"
+version = "0.1.0"
+description = "MCP server for Compass content vault"
+requires-python = ">=3.10"
+dependencies = [
+  "compass-core",
+]
+
+[project.scripts]
+compass-mcp = "compass_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["compass_mcp*"]

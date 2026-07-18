@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>ExampleAI Jobs</title>
+    <link>https://example.ai/jobs</link>
+    <item>
+      <title>ML Platform Engineer</title>
+      <link>https://example.ai/jobs/ml-platform</link>
+      <description>Python, Kubernetes, feature store required. On-call experience preferred.</description>
+    </item>
+    <item>
+      <title>Data Engineer</title>
+      <link>https://example.ai/jobs/data</link>
+      <description>Spark, SQL, Kafka. Python preferred.</description>
+    </item>
+  </channel>
+</rss>

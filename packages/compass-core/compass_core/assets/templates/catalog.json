@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "schema": "https://jsonresume.org/schema/",
+  "themes": [
+    {"id": "ats_plain", "name": "ATS Plain", "ats": true, "columns": 1, "best_for": ["any", "corporate"]},
+    {"id": "tech_single", "name": "Tech Single", "ats": true, "columns": 1, "best_for": ["software", "ml"]},
+    {"id": "classic_serif", "name": "Classic Serif", "ats": true, "columns": 1, "best_for": ["general"]},
+    {"id": "compact_dense", "name": "Compact Dense", "ats": true, "columns": 1, "best_for": ["senior", "dense"]},
+    {"id": "timeline", "name": "Timeline", "ats": false, "columns": 1, "best_for": ["career_change"]},
+    {"id": "two_column", "name": "Two Column", "ats": false, "columns": 2, "best_for": ["design", "product"]},
+    {"id": "modern_teal", "name": "Modern Teal", "ats": true, "columns": 1, "best_for": ["tech"]},
+    {"id": "minimal_mono", "name": "Minimal Mono", "ats": true, "columns": 1, "best_for": ["dev"]},
+    {"id": "sidebar_skills", "name": "Sidebar Skills", "ats": false, "columns": 2, "best_for": ["skills_heavy"]},
+    {"id": "impact_first", "name": "Impact First", "ats": true, "columns": 1, "best_for": ["metrics", "evidence"]},
+    {"id": "research_cv", "name": "Research CV", "ats": true, "columns": 1, "best_for": ["research", "phd"]},
+    {"id": "internship_lite", "name": "Internship Lite", "ats": true, "columns": 1, "best_for": ["intern", "campus"]}
+  ]
+}

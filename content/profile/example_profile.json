@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "Demo Candidate",
+  "target_roles": ["ML Platform Engineer", "Backend Engineer"],
+  "locations": ["Shanghai", "Remote"],
+  "salary_band": "40-60k",
+  "constraints": {
+    "must_have": ["Python"],
+    "avoid": ["纯外包驻场"],
+    "notice_period": "1 month",
+    "remote": true
+  },
+  "links": {
+    "github": "https://github.com/example",
+    "linkedin": "",
+    "email": "demo@example.com"
+  },
+  "notes": "Fixture profile for Compass demos"
+}

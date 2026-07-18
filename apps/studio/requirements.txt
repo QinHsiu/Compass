@@ -1,0 +1,9 @@
+# Compass Studio (Gradio)
+gradio>=4.44
+pymupdf>=1.24
+edge-tts>=6.1
+Pillow>=10.0
+# optional ASR / OCR / docx
+faster-whisper>=1.0; platform_system!="Darwin" or python_version<"3.13"
+python-docx>=1.1
+pytesseract>=0.3

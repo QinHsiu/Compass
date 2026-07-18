@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+apps/desk/.vite/
+apps/desk/dist/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Secrets
+.env
+*.pem
+credentials.json
+*.key
+
+# Gradio / local runtime
+.gradio/
+*.mp3
+*.wav
+
+# ---- User private / runtime data (NEVER commit) ----
+# Keep directory placeholders + anonymous fixtures only.
+content/profile/*
+!content/profile/.gitkeep
+!content/profile/example_profile.json
+
+content/evidence/*
+!content/evidence/.gitkeep
+
+content/jobs/*
+!content/jobs/.gitkeep
+
+content/resumes/*
+!content/resumes/.gitkeep
+
+content/interviews/*
+!content/interviews/.gitkeep
+
+content/diagnoses/*
+!content/diagnoses/.gitkeep
+
+content/track/*
+!content/track/.gitkeep
+!content/track/board.example.json
+
+content/questions/*
+!content/questions/.gitkeep
+
+# Crawl snapshots can be regenerated
+collectors/snapshots/
+
+# Anonymous demo data (safe to ship)
+!content/fixtures/
+!content/fixtures/**

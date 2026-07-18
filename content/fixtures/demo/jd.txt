@@ -1,0 +1,13 @@
+公司：ExampleAI
+职位：ML Platform Engineer
+岗位职责：
+- 负责特征平台与在线服务稳定性
+- 建设 Kubernetes 上的训练与推理任务编排
+要求：
+- 必须熟悉 Python
+- 必须有 Kubernetes 实战经验
+- 熟悉 feature store 或等价特征服务
+- 有线上事故处理经验优先
+加分：
+- RAG / LLM serving 经验
+- Spark 批处理经验

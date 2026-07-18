@@ -1,0 +1,17 @@
+{
+  "blocked_hosts": [
+    "zhipin.com",
+    "www.zhipin.com",
+    "liepin.com",
+    "www.liepin.com",
+    "lagou.com",
+    "www.lagou.com",
+    "linkedin.com",
+    "www.linkedin.com",
+    "indeed.com",
+    "www.indeed.com",
+    "51job.com",
+    "www.51job.com"
+  ],
+  "note": "Refuse login-walled job boards for automated deep scrape. User may still paste JD text."
+}

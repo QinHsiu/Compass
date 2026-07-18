@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "",
+  "target_roles": [],
+  "locations": [],
+  "salary_band": "",
+  "constraints": {
+    "must_have": [],
+    "avoid": [],
+    "notice_period": "",
+    "remote": null
+  },
+  "links": {
+    "github": "",
+    "linkedin": "",
+    "email": ""
+  },
+  "notes": ""
+}

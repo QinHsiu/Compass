@@ -1,0 +1,217 @@
+"""Unit tests for compass-core."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from compass_core.collectors import assert_url_allowed, collect_paste
+from compass_core.diagnose import diagnose_and_save
+from compass_core.evidence import build_index, load_evidence
+from compass_core.gate import check_claim, UNVERIFIED
+from compass_core.interview import interview_and_save
+from compass_core.jd import parse_jd
+from compass_core.match import match_and_save
+from compass_core.resume import apply_and_save
+from compass_core.track import upsert
+
+REPO = Path(__file__).resolve().parents[3]
+FIXTURE = REPO / "content" / "fixtures" / "demo"
+
+
+@pytest.fixture()
+def root(tmp_path: Path) -> Path:
+    # copy evidence + profile
+    ev = tmp_path / "evidence"
+    ev.mkdir()
+    for p in (FIXTURE / "evidence").glob("*.md"):
+        (ev / p.name).write_text(p.read_text(encoding="utf-8"), encoding="utf-8")
+    build_index(tmp_path)
+    (tmp_path / "profile").mkdir()
+    (tmp_path / "profile" / "profile.json").write_text(
+        (FIXTURE / "profile" / "profile.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    return tmp_path
+
+
+def test_parse_jd():
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    jd = parse_jd(text)
+    assert "python" in jd.keywords or any("Python" in r for r in jd.hard_requirements)
+    assert jd.company == "ExampleAI"
+    assert "ML Platform" in jd.title or "Engineer" in jd.title
+
+
+def test_evidence_index(root: Path):
+    items = load_evidence(root)
+    assert len(items) >= 3
+    idx = json.loads((root / "evidence" / "index.json").read_text(encoding="utf-8"))
+    assert idx["count"] == len(items)
+
+
+def test_gate_verified_and_reject(root: Path):
+    items = load_evidence(root)
+    ok = check_claim("cut p99 latency with redis cache ev_featstore_latency", items)
+    assert ok.ok
+    bad = check_claim("Became CEO of a Fortune 500 investment bank after an IPO roadshow", items)
+    assert not bad.ok
+    marked = check_claim(f"Claimed rocket science {UNVERIFIED}", items)
+    assert marked.ok and marked.status == "unverified"
+
+
+def test_match_diagnose_actions_schema(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    assert m.score > 0
+    out = diagnose_and_save(root, m.job_id)
+    actions = json.loads(
+        (root / "diagnoses" / m.job_id / "actions.json").read_text(encoding="utf-8")
+    )
+    assert actions
+    for a in actions:
+        assert a["what"] and a["proof"] and a["eta"]
+        assert a["quadrant"] in ("evidence", "narrative", "skill", "process")
+    report = (root / "diagnoses" / m.job_id / "report.md").read_text(encoding="utf-8")
+    assert "Quadrant: Evidence" in report
+    assert out["actions"] == len(actions)
+
+
+def test_resume_patch_evidence_gated(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    r = apply_and_save(root, m.job_id)
+    assert r["ops"] >= 0
+    resume = json.loads(
+        (root / "resumes" / m.job_id / "resume.json").read_text(encoding="utf-8")
+    )
+    blob = json.dumps(resume)
+    assert "ev_" in blob
+    ats = json.loads(
+        (root / "resumes" / m.job_id / "ats_report.json").read_text(encoding="utf-8")
+    )
+    assert "keyword_coverage" in ats
+
+
+def test_interview_cites_evidence(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    out = interview_and_save(root, m.job_id)
+    session = (root / "interviews" / m.job_id / "session.md").read_text(encoding="utf-8")
+    assert "evidence_id" in session or "ev_" in session
+    assert out["bank_n"] >= 1
+    assert "Retrieved bank questions" in session
+    assert (root / "interviews" / m.job_id / "bank_hits.json").is_file()
+
+
+def test_templates_and_json_resume(root: Path):
+    from compass_core.templates import list_themes, recommend_theme, render_all, to_json_resume
+
+    themes = list_themes()
+    assert len(themes) >= 12
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    r = apply_and_save(root, m.job_id)
+    assert r["theme"]
+    assert (root / "resumes" / m.job_id / "resume.html").is_file()
+    assert (root / "resumes" / m.job_id / "resume.jsonresume.json").is_file()
+    data = json.loads((root / "resumes" / m.job_id / "resume.json").read_text(encoding="utf-8"))
+    jr = to_json_resume(data)
+    assert "basics" in jr and "skills" in jr
+    assert recommend_theme(["python", "kubernetes"], "ML Platform") == "tech_single"
+
+
+def test_question_bank_retrieval():
+    from compass_core.questions import load_bank, search_questions
+
+    bank = load_bank()
+    assert len(bank) >= 90
+    hits = search_questions("python kubernetes feature store GIL", keywords=["python", "kubernetes"], limit=5)
+    assert hits
+    assert all("source" in h for h in hits)
+
+
+def test_ingest_text(tmp_path: Path):
+    from compass_core.ingest import extract_text, split_resume_to_evidence_drafts
+
+    p = tmp_path / "cv.txt"
+    p.write_text("Backend Engineer\n\n- Built APIs\n- Cut latency 50%\n", encoding="utf-8")
+    r = extract_text(p)
+    assert "Backend" in r["text"]
+    drafts = split_resume_to_evidence_drafts(r["text"])
+    assert drafts
+
+
+def test_llm_agent_bank_loaded():
+    from compass_core.questions import load_bank, search_questions
+
+    bank = load_bank()
+    llmish = [x for x in bank if x.get("topic") in ("llm", "agent") or "agent" in (x.get("tags") or [])]
+    assert len(llmish) >= 20
+    hits = search_questions("RAG agent tool memory prompt injection", keywords=["rag", "agent"], limit=5)
+    assert hits
+
+
+def test_voice_tts_optional():
+    from compass_core.voice import synthesize_speech
+
+    out = synthesize_speech("你好，这是 Compass 面试题。")
+    # either path or install warning — must not crash
+    assert "path" in out and "warning" in out
+
+
+def test_diagnose_bank_drills(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    diagnose_and_save(root, m.job_id)
+    assert (root / "diagnoses" / m.job_id / "bank_drills.json").is_file()
+    drills = json.loads((root / "diagnoses" / m.job_id / "bank_drills.json").read_text(encoding="utf-8"))
+    assert isinstance(drills, list)
+
+
+def test_pipeline_four_steps(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    apply_and_save(root, m.job_id)
+    interview_and_save(root, m.job_id)
+    diagnose_and_save(root, m.job_id)
+    assert (root / "resumes" / m.job_id / "resume.md").is_file()
+    assert (root / "interviews" / m.job_id / "session.md").is_file()
+    assert (root / "diagnoses" / m.job_id / "report.md").is_file()
+
+
+def test_track_and_blocklist(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    item = upsert(root, m.job_id, "applied", note="sent")
+    assert item["status"] == "applied"
+    with pytest.raises(PermissionError):
+        assert_url_allowed("https://www.zhipin.com/job_detail/123")
+
+
+def test_paste_collector(root: Path):
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = collect_paste(root, text)
+    assert (root / "jobs" / m.job_id / "match.json").is_file()
+
+
+def test_rss_and_career_fixtures(root: Path, tmp_path: Path):
+    import feedparser
+    from bs4 import BeautifulSoup
+    from compass_core.match import match_and_save as mas
+
+    # RSS fixture offline parse (no network)
+    feed = feedparser.parse((FIXTURE / "jobs.rss").read_text(encoding="utf-8"))
+    assert len(feed.entries) >= 2
+    for entry in feed.entries[:2]:
+        body = f"职位：{entry.title}\n\n{entry.description}"
+        mas(root, body)
+
+    html = (FIXTURE / "career_sample.html").read_text(encoding="utf-8")
+    soup = BeautifulSoup(html, "lxml")
+    links = [a.get_text(strip=True) for a in soup.find_all("a") if "Engineer" in a.get_text()]
+    assert len(links) >= 1
+    for t in links:
+        mas(root, f"职位：{t}\n公司：example.ai\n")
