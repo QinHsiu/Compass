@@ -89,28 +89,43 @@ def ui_run_pipeline(jd_text: str, theme: str):
     i = interview_and_save(root, m.job_id)
     d = diagnose_and_save(root, m.job_id)
     upsert(root, m.job_id, "wishlist", note="studio pipeline")
+    import re
+
     resume_md = (root / "resumes" / m.job_id / "resume.md").read_text(encoding="utf-8")
     session = (root / "interviews" / m.job_id / "session.md").read_text(encoding="utf-8")
     report = (root / "diagnoses" / m.job_id / "report.md").read_text(encoding="utf-8")
+    # Highlight evidence_id cites for quick scan
+    resume_md = re.sub(r"(ev_[a-zA-Z0-9_]+)", r"**[`\1`]**", resume_md)
+    session = re.sub(r"(ev_[a-zA-Z0-9_]+)", r"**[`\1`]**", session)
     summary = (
         f"匹配分 {m.score} · 主题 {r.get('theme')} · 题库命中 {i.get('bank_n')} · "
-        f"job_id `{m.job_id}`"
+        f"job_id `{m.job_id}` · "
+        f"[打开 HTML 简历](file://{(root / 'resumes' / m.job_id / 'resume.html').as_posix()})"
     )
     html_path = root / "resumes" / m.job_id / "resume.html"
     return summary, resume_md, session, report, str(html_path) if html_path.is_file() else ""
 
 
-def ui_search_bank(query: str, limit: int):
-    hits = search_questions(
-        query or "llm agent rag",
-        keywords=["llm", "agent", "rag"],
-        limit=int(limit or 10),
-        extra_root=_root(),
-    )
+def ui_search_bank(query: str, limit: int, semantic: bool = False):
+    root = _root()
+    q = query or "llm agent rag"
+    if semantic:
+        from compass_core.rag import semantic_search
+
+        hits = semantic_search(root, q, k=int(limit or 10))
+        backend = "semantic"
+    else:
+        hits = search_questions(
+            q,
+            keywords=["llm", "agent", "rag"],
+            limit=int(limit or 10),
+            extra_root=root,
+        )
+        backend = "token"
     lines = [
-        f"- `{h['id']}` [{h['topic']}] {h['q']} _(source: {h.get('source')})_" for h in hits
+        f"- `{h['id']}` [{h.get('topic')}] {h['q']} _(source: {h.get('source')})_" for h in hits
     ]
-    return f"题库总量 {len(load_bank(_root()))}\n\n" + "\n".join(lines)
+    return f"题库总量 {len(load_bank(root))} · {backend}\n\n" + "\n".join(lines)
 
 
 def ui_refresh_crawl():
@@ -163,21 +178,35 @@ def ui_submit_answer(job_id: str, question_md: str, text_ans: str, audio):
     if not answer:
         return f"未收到答案。{warn}", None
     from compass_core.gate import check_claims
+    from compass_core.interview import next_followup
 
     results = check_claims([answer], root)
     gate = results[0] if results else None
+    jid = (job_id or "session").strip()
+    pack = {}
+    pack_path = root / "interviews" / jid / "pack.json"
+    if pack_path.is_file():
+        pack = json.loads(pack_path.read_text(encoding="utf-8"))
+    fu = next_followup(
+        pack or {"title": "本岗位", "gaps": [], "evidence": [], "bank_hits": []},
+        answer,
+        bool(gate and gate.ok),
+        gate.reason if gate else "",
+        turn=0,
+    )
     feedback = (
         f"**证据门禁**: {'通过 · ' + gate.status if gate and gate.ok else '未通过'}  \n"
         f"{gate.reason if gate else ''}  \n"
         f"**evidence_ids**: {gate.evidence_ids if gate else []}  \n"
         f"**语音识别**: {asr_text or '（未使用）'}  \n"
+        f"**下一追问** ({fu.get('mode')}): {fu.get('question')}  \n"
         f"{warn}"
     )
-    speak = "回答已记录。" + (
-        "已关联证据。" if gate and gate.ok else "请补充 evidence_id 或标 UNVERIFIED。"
+    speak = fu.get("question") or (
+        "回答已记录。"
+        + ("已关联证据。" if gate and gate.ok else "请补充 evidence_id 或标 UNVERIFIED。")
     )
     tts = synthesize_speech(speak, voice=VOICES["zh-male"])
-    jid = (job_id or "session").strip()
     out = root / "interviews" / jid
     out.mkdir(parents=True, exist_ok=True)
     with (out / "oral_log.jsonl").open("a", encoding="utf-8") as f:
@@ -188,6 +217,8 @@ def ui_submit_answer(job_id: str, question_md: str, text_ans: str, audio):
                     "answer": answer,
                     "asr": asr_text,
                     "gate": gate.status if gate else None,
+                    "followup": fu.get("question"),
+                    "followup_mode": fu.get("mode"),
                 },
                 ensure_ascii=False,
             )
@@ -459,9 +490,42 @@ def build_app() -> gr.Blocks:
 
             with gr.Tab("模拟面试"):
                 with gr.Column(elem_classes=["cm-panel"]):
+                    live_url = os.environ.get("COMPASS_LIVE_URL", "http://127.0.0.1:8766")
                     gr.HTML(
                         '<div class="cm-section-title">文字 + 口语双模式</div>'
-                        '<p class="cm-section-desc">先跑「智能求职」。可打字作答，或录音识别；题目支持语音播报。</p>'
+                        f'<p class="cm-section-desc">先跑「智能求职」。可打字/录音；'
+                        f'推荐打开 <a href="{live_url}" target="_blank">Interview Live 实时面试</a>'
+                        f'（WebSocket + 自适应追问 + Monaco）。</p>'
+                        '<p class="cm-section-desc">'
+                        '<button type="button" id="cm-webspeech" style="padding:8px 12px;border:none;'
+                        'border-radius:8px;background:#eef4ff;color:#2b6de5;font-weight:600;cursor:pointer">'
+                        '浏览器语音输入 (Web Speech)</button> '
+                        '<span id="cm-webspeech-status" class="cm-section-desc">无 faster-whisper 时可用</span></p>'
+                        "<script>"
+                        "(function(){"
+                        "var btn=document.getElementById('cm-webspeech');"
+                        "if(!btn)return;"
+                        "var SR=window.SpeechRecognition||window.webkitSpeechRecognition;"
+                        "btn.onclick=function(){"
+                        "var st=document.getElementById('cm-webspeech-status');"
+                        "if(!SR){st.textContent='当前浏览器不支持 Web Speech';return;}"
+                        "var r=new SR();r.lang='zh-CN';r.interimResults=false;"
+                        "st.textContent='正在听…';"
+                        "r.onresult=function(e){"
+                        "var t=e.results[0][0].transcript;"
+                        "var areas=document.querySelectorAll('textarea');"
+                        "var target=null;"
+                        "areas.forEach(function(a){if((a.placeholder||'').indexOf('evidence')>=0)target=a;});"
+                        "if(!target&&areas.length)target=areas[areas.length-1];"
+                        "if(target){target.value=(target.value?target.value+' ':'')+t;"
+                        "target.dispatchEvent(new Event('input',{bubbles:true}));}"
+                        "st.textContent='已填入：'+t.slice(0,40);"
+                        "};"
+                        "r.onerror=function(){st.textContent='识别失败，请改用录音或文字';};"
+                        "r.start();"
+                        "};"
+                        "})();"
+                        "</script>"
                     )
                     with gr.Row():
                         job_id = gr.Textbox(label="岗位 ID（留空=最近一次）")
@@ -493,22 +557,28 @@ def build_app() -> gr.Blocks:
                     with gr.Row():
                         q = gr.Textbox(value="llm agent rag tool memory", label="搜索关键词")
                         lim = gr.Slider(3, 30, value=12, step=1, label="条数")
+                        semantic = gr.Checkbox(label="语义检索 (RAG)", value=False)
                     with gr.Row():
                         btn_s = gr.Button("搜索题库", variant="primary")
                         btn_c = gr.Button("刷新 LLM/Agent 爬取")
                     bank_out = gr.Textbox(lines=14, label="检索结果")
                     crawl_out = gr.Textbox(lines=6, label="爬取日志")
-                    btn_s.click(ui_search_bank, [q, lim], [bank_out])
+                    btn_s.click(ui_search_bank, [q, lim, semantic], [bank_out])
                     btn_c.click(ui_refresh_crawl, [], [crawl_out])
 
             with gr.Tab("关于"):
                 with gr.Column(elem_classes=["cm-panel"]):
+                    from compass_core.llm import describe_config
+
+                    llm_meta = describe_config()
                     gr.Markdown(
-                        """
+                        f"""
 ### Compass · 证据驱动求职罗盘
 
-界面动线参考专业简历平台（如 [全民简历](https://www.qmjianli.com/)）的清晰分层：品牌区 → 能力条 → 工具 Tab。  
-差异点：本地优先、证据门禁、缺口罗盘、不做平台自动投递。
+界面动线参考专业简历平台（如 [全民简历](https://www.qmjianli.com/)）。  
+差异点：本地优先、证据门禁、缺口罗盘、Interview Live 实时追问。
+
+**LLM**：provider=`{llm_meta.get('provider')}` model=`{llm_meta.get('model')}` key={'已配置' if llm_meta.get('has_key') else '未配置（规则降级）'}
 
 | 语言 | 一句话 |
 |:-----|:-------|
@@ -516,7 +586,8 @@ def build_app() -> gr.Blocks:
 | English | Turn real experience into matchable, interview-ready evidence |
 | 日本語 | 実体験を応募・面接に耐える証拠へ |
 
-CLI：`python -m compass_core.cli studio`  
+CLI：`studio` · `live` · `rag-index` · `timeline`  
+Docker：`docker compose up`  
 Skill：`/discover` → `/resume` → `/interview` → `/diagnose`
                         """
                     )
@@ -525,10 +596,11 @@ Skill：`/discover` → `/resume` → `/interview` → `/diagnose`
 
 def main():
     port = int(os.environ.get("COMPASS_PORT", "7860"))
+    host = os.environ.get("COMPASS_HOST", "127.0.0.1")
     demo = build_app()
-    print(f"[Compass Studio] starting http://127.0.0.1:{port}/", flush=True)
+    print(f"[Compass Studio] starting http://{host}:{port}/", flush=True)
     demo.launch(
-        server_name="127.0.0.1",
+        server_name=host,
         server_port=port,
         inbrowser=False,
         theme=gr.themes.Default(primary_hue="blue", neutral_hue="slate"),

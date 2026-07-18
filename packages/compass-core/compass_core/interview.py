@@ -37,13 +37,20 @@ def build_pack(root: Path, job_id: str) -> dict:
 
     topics = infer_topics(jd.keywords)
     query = " ".join(jd.keywords + jd.hard_requirements[:5] + [jd.title])
-    bank_hits = search_questions(
-        query,
-        keywords=jd.keywords,
-        topics=topics,
-        limit=12,
-        extra_root=root,
-    )
+    try:
+        from .rag import semantic_search
+
+        bank_hits = semantic_search(root, query, k=12)
+        if not bank_hits:
+            raise RuntimeError("empty semantic")
+    except Exception:
+        bank_hits = search_questions(
+            query,
+            keywords=jd.keywords,
+            topics=topics,
+            limit=12,
+            extra_root=root,
+        )
 
     pack = {
         "job_id": job_id,
@@ -144,3 +151,80 @@ def interview_and_save(root: Path, job_id: str) -> dict:
         "bank_n": len(pack.get("bank_hits") or []),
         "path": str(out),
     }
+
+
+def next_followup(
+    pack: dict,
+    last_answer: str,
+    gate_ok: bool,
+    gate_reason: str = "",
+    turn: int = 0,
+) -> dict:
+    """
+    Adaptive follow-up. Returns {question, mode: llm|rules, meta}.
+    """
+    from .llm import chat, load_config
+
+    gaps = pack.get("gaps") or pack.get("keyword_misses") or []
+    evidence = pack.get("evidence") or []
+    bank = pack.get("bank_hits") or []
+    title = pack.get("title") or "this role"
+
+    # Rule path (always available)
+    def _rules() -> str:
+        if not gate_ok:
+            eid = evidence[0]["evidence_id"] if evidence else "ev_xxx"
+            return (
+                f"你的回答缺少可验证证据。请用 STAR 重述，并引用至少一个 evidence_id"
+                f"（例如 `{eid}`），给出可量化结果。"
+            )
+        if gaps and turn % 2 == 0:
+            g = gaps[min(turn, len(gaps) - 1)]
+            return f"JD 仍有缺口：「{str(g)[:80]}」。你计划如何在到岗前补齐？勿编造未做过的经历。"
+        if bank:
+            b = bank[min(turn, len(bank) - 1)]
+            return str(b.get("q") or f"结合 {title} 再深入一层：你如何权衡 trade-off？")
+        if evidence:
+            ev = evidence[min(turn, len(evidence) - 1)]
+            return (
+                f"围绕 `{ev.get('evidence_id')}`（{ev.get('title')}）："
+                f"如果指标再差 30%，你会怎么定位？"
+            )
+        return f"为什么你比其他候选人更适合 {title}？请只基于真实经历。"
+
+    cfg = load_config()
+    system = (
+        "You are a strict technical interviewer for Compass. "
+        "Ask ONE short follow-up question in the user's language (default Chinese). "
+        "If the answer lacks evidence, demand metrics or evidence_id. "
+        "If solid, probe the next JD gap. Never invent candidate experience. "
+        "Output only the question text."
+    )
+    user = json.dumps(
+        {
+            "role": title,
+            "gaps": gaps[:5],
+            "evidence_ids": [e.get("evidence_id") for e in evidence[:5]],
+            "last_answer": (last_answer or "")[:800],
+            "gate_ok": gate_ok,
+            "gate_reason": gate_reason,
+            "turn": turn,
+        },
+        ensure_ascii=False,
+    )
+    res = chat(
+        [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        config=cfg,
+    )
+    if res.get("used_llm") and res.get("text"):
+        return {
+            "question": res["text"].strip().split("\n")[0][:300],
+            "mode": "llm",
+            "meta": {"provider": res.get("provider"), "model": res.get("model")},
+        }
+    return {"question": _rules(), "mode": "rules", "meta": {"error": res.get("error") or ""}}
+
+
+def opening_question(pack: dict) -> str:
+    title = pack.get("title") or "本岗位"
+    return f"请用 90 秒介绍你为什么适合 {title}，并引用至少一个 evidence_id。"

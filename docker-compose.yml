@@ -1,0 +1,40 @@
+services:
+  studio:
+    build: .
+    command: ["studio"]
+    ports:
+      - "7860:7860"
+    environment:
+      COMPASS_ROOT: /app/content
+      COMPASS_DEMO: "1"
+      COMPASS_HOST: "0.0.0.0"
+      COMPASS_PORT: "7860"
+      COMPASS_LIVE_URL: http://localhost:8766
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      COMPASS_MODEL: ${COMPASS_MODEL:-}
+      COMPASS_LLM_PROVIDER: ${COMPASS_LLM_PROVIDER:-openai}
+    volumes:
+      - compass_content:/app/content
+    depends_on:
+      - interview-live
+
+  interview-live:
+    build: .
+    command: ["live"]
+    ports:
+      - "8766:8766"
+    environment:
+      COMPASS_ROOT: /app/content
+      COMPASS_DEMO: "1"
+      COMPASS_HOST: "0.0.0.0"
+      COMPASS_LIVE_PORT: "8766"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      COMPASS_MODEL: ${COMPASS_MODEL:-}
+      COMPASS_LLM_PROVIDER: ${COMPASS_LLM_PROVIDER:-openai}
+    volumes:
+      - compass_content:/app/content
+
+volumes:
+  compass_content:

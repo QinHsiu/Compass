@@ -123,20 +123,79 @@ def cmd_questions(args) -> int:
     root = _root(args)
     kws = [k.strip() for k in (args.keywords or "").split(",") if k.strip()]
     topics = infer_topics(kws) if kws else None
-    hits = search_questions(
-        args.query or " ".join(kws),
-        keywords=kws,
-        topics=topics,
-        limit=args.limit,
-        extra_root=root,
-    )
+    query = args.query or " ".join(kws)
+    if getattr(args, "semantic", False):
+        from .rag import semantic_search
+
+        hits = semantic_search(root, query, k=args.limit)
+        backend = "semantic"
+    else:
+        hits = search_questions(
+            query,
+            keywords=kws,
+            topics=topics,
+            limit=args.limit,
+            extra_root=root,
+        )
+        backend = "token"
     print(
         json.dumps(
-            {"count_bank": len(load_bank(root)), "hits": hits, "sources": "assets/questions/SOURCES.md"},
+            {
+                "backend": backend,
+                "count_bank": len(load_bank(root)),
+                "hits": hits,
+                "sources": "assets/questions/SOURCES.md",
+            },
             ensure_ascii=False,
             indent=2,
         )
     )
+    return 0
+
+
+def cmd_rag_index(args) -> int:
+    from .rag import index_questions
+
+    print(json.dumps(index_questions(_root(args)), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_llm_info(args) -> int:
+    from .llm import describe_config, load_config
+
+    cfg = load_config(provider=args.provider, model=args.model, base_url=args.base_url)
+    print(json.dumps(describe_config(cfg), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_live(args) -> int:
+    import os
+    import runpy
+
+    repo = Path(__file__).resolve().parents[3]
+    live = repo / "apps" / "interview-live" / "main.py"
+    if not live.is_file():
+        print(f"interview-live not found at {live}", file=sys.stderr)
+        return 1
+    if getattr(args, "root", None):
+        os.environ["COMPASS_ROOT"] = str(Path(args.root).resolve())
+    if getattr(args, "port", None):
+        os.environ["COMPASS_LIVE_PORT"] = str(args.port)
+    runpy.run_path(str(live), run_name="__main__")
+    return 0
+
+
+def cmd_timeline(args) -> int:
+    from .timeline import build_timeline, render_timeline_html
+
+    root = _root(args)
+    data = build_timeline(root, job_id=args.job_id)
+    if args.html:
+        out = Path(args.html)
+        out.write_text(render_timeline_html(data), encoding="utf-8")
+        print(json.dumps({"path": str(out), "summary": data["summary"]}, ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(data, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -294,12 +353,30 @@ def build_parser() -> argparse.ArgumentParser:
     qb.add_argument("--query", default="")
     qb.add_argument("--keywords", default="")
     qb.add_argument("--limit", type=int, default=12)
+    qb.add_argument("--semantic", action="store_true", help="use Chroma RAG when available")
     qb.set_defaults(func=cmd_questions)
+
+    rag = sub.add_parser("rag-index", parents=[parent], help="build local question vector index")
+    rag.set_defaults(func=cmd_rag_index)
+
+    llm = sub.add_parser("llm-info", parents=[parent], help="show LLM provider config")
+    llm.add_argument("--provider", default=None)
+    llm.add_argument("--model", default=None)
+    llm.add_argument("--base-url", default=None)
+    llm.set_defaults(func=cmd_llm_info)
+
+    live = sub.add_parser("live", parents=[parent], help="launch Interview Live (WebSocket)")
+    live.add_argument("--port", type=int, default=8766)
+    live.set_defaults(func=cmd_live)
+
+    tl = sub.add_parser("timeline", parents=[parent], help="evidence chain timeline JSON/HTML")
+    tl.add_argument("--job-id", default=None)
+    tl.add_argument("--html", default=None, help="write HTML file path")
+    tl.set_defaults(func=cmd_timeline)
 
     i = sub.add_parser("interview-pack", parents=[parent], help="build interview pack + session")
     i.add_argument("--job-id", required=True)
     i.set_defaults(func=cmd_interview)
-
     di = sub.add_parser("diagnose", parents=[parent], help="gap compass report + bridge plan")
     di.add_argument("--job-id", default=None)
     di.add_argument("--fixture", default=None)

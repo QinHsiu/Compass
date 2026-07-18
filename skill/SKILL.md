@@ -48,7 +48,7 @@ If the user omits a slash command, **ask** which command to use before proceedin
 | `/desk` | Start light local workbench |
 | `/studio` | Launch Gradio Studio (upload / voice / pipeline) |
 
-CLI-only: `crawl-llm` refreshes the LLM/Agent question bank.
+CLI companions: `live` (WebSocket realtime interview), `rag-index` / `questions --semantic`, `timeline`, `llm-info`, `crawl-llm`.
 
 Strip the slash command; remaining text is the payload (JD, notes, job_id, etc.).
 

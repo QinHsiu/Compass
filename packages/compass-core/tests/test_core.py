@@ -162,6 +162,52 @@ def test_voice_tts_optional():
     assert "path" in out and "warning" in out
 
 
+def test_followup_rules():
+    from compass_core.interview import next_followup, opening_question
+
+    pack = {
+        "title": "ML Platform Engineer",
+        "gaps": ["必须熟悉 feature store"],
+        "keyword_misses": ["rag"],
+        "evidence": [{"evidence_id": "ev_featstore_latency", "title": "latency"}],
+        "bank_hits": [{"q": "Explain RAG evaluation?"}],
+    }
+    assert "evidence_id" in opening_question(pack) or "适合" in opening_question(pack)
+    weak = next_followup(pack, "我很厉害", gate_ok=False, turn=0)
+    assert weak["question"] and weak["mode"] in ("rules", "llm")
+    strong = next_followup(pack, "我们把 p99 做到 45ms ev_featstore_latency", gate_ok=True, turn=0)
+    assert strong["question"]
+
+
+def test_llm_describe():
+    from compass_core.llm import describe_config
+
+    d = describe_config()
+    assert "provider" in d and "model" in d
+
+
+def test_timeline_builder(root: Path):
+    from compass_core.timeline import build_timeline, render_timeline_html
+
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    apply_and_save(root, m.job_id)
+    interview_and_save(root, m.job_id)
+    data = build_timeline(root, job_id=m.job_id)
+    assert data["summary"]["evidence"] >= 1
+    html = render_timeline_html(data)
+    assert "证据链" in html
+
+
+def test_rag_fallback(root: Path):
+    from compass_core.rag import index_questions, semantic_search
+
+    info = index_questions(root)
+    assert "count" in info
+    hits = semantic_search(root, "python kubernetes feature store", k=3)
+    assert isinstance(hits, list)
+
+
 def test_diagnose_bank_drills(root: Path):
     text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
     m = match_and_save(root, text)

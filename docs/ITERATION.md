@@ -1,28 +1,29 @@
 # Iteration plan / 自迭代计划
 
 ## Goal
-连贯、简洁、高效：上传简历 → 岗位 → 匹配/改简历 → 文本&口语面试 → 缺口诊断；LLM/Agent 题库持续更新。
+
+证据驱动闭环 + 实时面试追问 + 可部署 Demo；不堆企业端/监考。
 
 ## Loop
 
-| Round | Gap found | Fix | Done |
-|:------|:----------|:----|:-----|
-| R1 | 无实时交互 UI | Gradio Studio (`apps/studio`) | ✅ |
-| R2 | 简历仅文本 | PDF/图片 ingest (`ingest.py`) | ✅ |
-| R3 | 题库缺 LLM/Agent | `crawl_llm` + seed 30 + 公开源 | ✅ |
-| R4 | 面试无口语 | edge-tts + faster-whisper ASR | ✅ |
-| R5 | README 普通 | 多语言英雄首页 | ✅ |
-| R6 | 可选：OCR 依赖重 | 降级提示 + 粘贴兜底 | ✅ |
-| R7 | 下一轮 | 浏览器内 Web Speech 降级、更多 Agent 源 | ⏳ |
-
-## Stop criteria
-- Studio 五 Tab 可走通 demo JD
-- 口语：TTS 有声；无 whisper 时可纯文本
-- 题库含 llm/agent topic 且可检索
-- pytest 绿
+| Round | Gap | Fix | Done |
+|:------|:----|:----|:-----|
+| R1–R6 | Studio / ingest / bank / voice / README | v0.3 | ✅ |
+| A1 | Docker / Demo | Dockerfile + compose + HF card | ✅ |
+| A2 | Multi-LLM | `compass_core.llm` | ✅ |
+| A3 | Realtime interview | `apps/interview-live` WebSocket | ✅ |
+| A4 | Adaptive follow-up | `next_followup` | ✅ |
+| B1 | RAG | Chroma `rag-index` / `--semantic` | ✅ |
+| B2 | Docs / community | COMPETITIVE + CONTRIBUTING + launch.md | ✅ |
+| C | Timeline / Monaco / PWA | Live UI | ✅ |
 
 ## Commands
+
 ```bash
-python -m compass_core.cli crawl-llm --root content
-python -m compass_core.cli studio --root content --port 7860
+docker compose up
+python -m compass_core.cli studio --root content
+python -m compass_core.cli live --root content
+python -m compass_core.cli rag-index --root content
+python -m compass_core.cli questions --semantic --query "rag agent memory"
+python -m compass_core.cli timeline --root content --html content/timeline.html
 ```

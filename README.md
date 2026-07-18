@@ -43,15 +43,21 @@
 ```bash
 # Windows
 .\scripts\install.ps1
+pip install -e "packages/compass-core[dev,studio,live,rag]"
 pip install -r apps/studio/requirements.txt
+pip install -r apps/interview-live/requirements.txt
 
-# 刷新 LLM/Agent 题库（公开源 + 精选）
+# Docker（推荐试用）
+docker compose up --build
+# Studio http://127.0.0.1:7860 · Live http://127.0.0.1:8766
+
+# 本地
 python -m compass_core.cli crawl-llm --root content
-
-# 启动交互界面
 python -m compass_core.cli studio --root content --port 7860
-# → http://127.0.0.1:7860
+python -m compass_core.cli live --root content --port 8766
 ```
+
+HF Space 卡片说明见 [README_SPACE.md](README_SPACE.md)（Demo 仅 fixtures）。
 
 Unix: `./install.sh` then the same `crawl-llm` / `studio` commands.
 

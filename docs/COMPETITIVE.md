@@ -1,46 +1,50 @@
 # Competitive positioning / 竞品对照
 
-Compass vs projects surveyed in `projects/compass_r.txt`.
+Sources: early resume-tool survey + [compass_r.txt](../../compass_r.txt) interview-sim wave (DeepInterview, alading, OfferCat, Lingwu, …).
 
-**Scope**: Beat open-source peers on resume write/diagnose/patch, job find, interview sim, gap advice.
-Skip hard closed/desktop-only forms (e.g. Tauri JobPilot as full desktop app).
+## Moat (keep)
 
-| Capability | FaceTomato | Job OK | SIT | JadeAI | Magic Resume | Reactive Resume | 面试鸭 | BossHunter | **Compass** |
-|:-----------|:----------:|:------:|:---:|:------:|:------------:|:---------------:|:------:|:----------:|:-----------:|
-| Resume patch + evidence gate | partial | ✅ | ✅ | AI edit | MCP patch | editor | ❌ | custom PDF | **✅ gated** |
-| Template density | mid | low | low | **50+** | 12 | many | ❌ | few | **12 themed + JSON Resume** |
-| Interview sim | ✅ | ✅ | STAR | ❌ | weak | ❌ | 题库 | ❌ | **JD + bank retrieve** |
-| Question bank | DIY | low | gen | ❌ | ❌ | ❌ | **9k+** | ❌ | **98+ searchable + extra.jsonl** |
-| Job discover | weak | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | autom* | **paste/RSS/career** |
-| Gap compass 4Q | ❌ | partial | partial | ❌ | score | ❌ | ❌ | score | **✅ core** |
-| Track | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Local skill form | ❌ | ✅ | ✅ | ❌ | MCP | ❌ | ❌ | ❌ | **Skill+Desk+MCP** |
+| Differentiator | Compass |
+|:---------------|:--------|
+| Evidence gate | Resume/interview claims need `evidence_id` |
+| Gap compass 4Q | Evidence / Narrative / Skill / Process + 做什么/证明物/耗时 |
+| Multi-form | Gradio Studio + Interview Live + Skill + CLI + MCP |
+| Local-first | Data under `content/`, no required cloud account |
 
-\*BossHunter auto-apply: skipped by design (ToS).
+## Interview-sim wave (compass_r.txt)
 
-## Open-source integrations (with attribution)
+| Capability | Compass | DeepInterview | alading | OfferCat | Lingwu | InterviewPrep.AI |
+|:-----------|:-------:|:-------------:|:-------:|:--------:|:------:|:----------------:|
+| Resume→JD→Patch→Diagnose | **✅** | partial | ❌ | partial | ❌ | resume+interview |
+| Evidence gate | **✅** | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Texttime voice | **Live WS + Web Speech** | LiveKit | WebSocket | voice | voice | voice |
+| Adaptive follow-up | **✅** | ✅ | partial | partial | ✅ | partial |
+| Multi-LLM BYOK | **✅ OpenAI-compatible** | ✅ | OpenAI | vLLM | ✅ | ✅ |
+| RAG bank | **Chroma** | ❌ | ❌ | BGE | ❌ | ❌ |
+| Docker / Demo | **compose + HF Space card** | Docker | demo | ❌ | Docker | APK |
+| Enterprise HR | ❌ (out of scope) | ❌ | ❌ | ❌ | ✅ | dual-mode |
+| Proctoring camera | ❌ (privacy) | ❌ | ❌ | ❌ | ❌ | MediaPipe |
 
-| Asset | Path | Sources doc |
-|:------|:-----|:------------|
-| Resume themes | `compass_core/assets/templates/` | [SOURCES.md](../packages/compass-core/compass_core/assets/templates/SOURCES.md) |
-| Question bank | `compass_core/assets/questions/bank.jsonl` | [SOURCES.md](../packages/compass-core/compass_core/assets/questions/SOURCES.md) |
+## Resume-tool wave (earlier)
 
-Inspired by: JSON Resume, Reactive Resume, jsonresume-theme-tech/class, h5bp FE interview questions, tech-interview-handbook, awesome-interview-questions.
-
-## Hard acceptance metrics
-
-| Metric | Target | Status |
-|:-------|:-------|:-------|
-| E2E ≤4 commands | yes | pipeline |
-| Theme count | ≥12 | catalog.json |
-| Bank searchable by JD keywords | yes | `questions` CLI + interview |
-| Unverified expansion | 0 | gate |
-| Diagnose + bank drills | yes | bank_drills.json |
-| Template attribution | required | SOURCES.md + HTML footer |
+| Capability | FaceTomato | Job OK | JadeAI | 面试鸭 | **Compass** |
+|:-----------|:----------:|:------:|:------:|:------:|:-----------:|
+| Resume themes | mid | low | 50+ | ❌ | 12 + JSON Resume |
+| Question bank ops | DIY | low | ❌ | 9k+ | curated + crawl + RAG |
+| Track | ❌ | ✅ | ❌ | ❌ | ✅ |
 
 ## Intentionally skipped
 
-- Full WYSIWYG 50-template visual designer (JadeAI) — we ship selectable themes + JSON Resume export instead
-- CDP auto-apply (BossHunter)
-- Operating a scraped 万级八股站点 (面试鸭) — retrieval over curated + user `extra.jsonl`
-- Native Windows desktop shell (JobPilot) — Skill + local Desk instead
+- 200+ career mini-tools (Sproutern)
+- Default enterprise recruiter SaaS (Lingwu)
+- Camera proctoring (conflicts with local privacy positioning)
+- Full Gradio→React rewrite (Live app covers realtime gap)
+
+## Acceptance (post Wave A–C)
+
+| Metric | Target |
+|:-------|:-------|
+| `docker compose up` | Studio + Live reachable |
+| Adaptive follow-up | LLM or rules; gate on each answer |
+| `rag-index` + `--semantic` | semantic hits when chromadb installed |
+| Timeline / Monaco / PWA | Live UI available |

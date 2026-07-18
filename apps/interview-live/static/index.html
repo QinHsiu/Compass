@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#2b6de5"/>
+  <link rel="manifest" href="/static/manifest.webmanifest"/>
+  <title>Compass Interview Live</title>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <style>
+    :root { --blue:#2b6de5; --ink:#1c2434; --muted:#6b7280; --bg:#f5f8fc; --line:#e6ebf2; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Noto Sans SC","DM Sans",system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+    header { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; background:#fff; border-bottom:1px solid var(--line); }
+    header h1 { margin:0; font-size:1.2rem; color:var(--blue); }
+    header a { color:var(--muted); font-size:.9rem; }
+    main { max-width:960px; margin:0 auto; padding:20px; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button, select { border:none; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer; }
+    button.primary { background:linear-gradient(180deg,#3b7cf0,var(--blue)); color:#fff; }
+    button.ghost { background:#eef4ff; color:var(--blue); }
+    #log { height:280px; overflow:auto; background:#fafcff; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:.95rem; }
+    .q { color:var(--blue); margin:8px 0; }
+    .a { color:var(--ink); margin:8px 0 12px; padding-left:8px; border-left:3px solid #c9d8f5; }
+    .gate-ok { color:#0f766e; } .gate-bad { color:#b91c1c; }
+    textarea { width:100%; min-height:90px; border-radius:10px; border:1px solid var(--line); padding:10px; font:inherit; }
+    #editor { height:260px; border:1px solid var(--line); border-radius:10px; margin-top:8px; }
+    .muted { color:var(--muted); font-size:.85rem; }
+    .tabs button { margin-right:6px; }
+    .tabs button.active { outline:2px solid var(--blue); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Compass · Interview Live</h1>
+  <div>
+    <a href="/timeline" target="_blank">证据时间线</a>
+    ·
+    <a href="/" id="pwaHint">PWA 可安装</a>
+  </div>
+</header>
+<main>
+  <div class="panel">
+    <div class="row">
+      <select id="job"></select>
+      <button class="primary" id="btnStart">开始实时面试</button>
+      <button class="ghost" id="btnSpeak">播报当前题</button>
+      <button class="ghost" id="btnMic">语音作答 (Web Speech)</button>
+      <span class="muted" id="status">未连接</span>
+    </div>
+  </div>
+  <div class="panel tabs">
+    <button class="ghost active" data-tab="chat">对话</button>
+    <button class="ghost" data-tab="code">代码面 (Monaco)</button>
+  </div>
+  <div id="tab-chat">
+    <div class="panel"><div id="log"></div></div>
+    <div class="panel">
+      <textarea id="answer" placeholder="输入回答（请引用 evidence_id）…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="btnSend">发送回答</button>
+      </div>
+    </div>
+  </div>
+  <div id="tab-code" style="display:none">
+    <div class="panel">
+      <p class="muted">本地静态检查，不远程执行。适合白板/伪代码练习。</p>
+      <div id="editor"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="btnCode">提交代码检查</button>
+      </div>
+      <pre id="codeFb" class="muted"></pre>
+    </div>
+  </div>
+</main>
+<script>
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+let ws = null, currentQ = '', monacoEditor = null;
+const synth = window.speechSynthesis;
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function addLine(html, cls='') {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.innerHTML = html;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function loadJobs() {
+  const r = await fetch('/api/jobs');
+  const data = await r.json();
+  const sel = document.getElementById('job');
+  sel.innerHTML = '';
+  (data.jobs || []).forEach(j => {
+    const o = document.createElement('option');
+    o.value = j.job_id;
+    o.textContent = `${j.title || j.job_id} @ ${j.company || ''} (${j.score ?? ''})`;
+    sel.appendChild(o);
+  });
+  if (!sel.options.length) {
+    const o = document.createElement('option');
+    o.value = 'latest'; o.textContent = 'latest（请先跑 Studio 流水线）';
+    sel.appendChild(o);
+  }
+}
+
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  synth.speak(u);
+}
+
+function connect() {
+  const job = document.getElementById('job').value || 'latest';
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/interview/${encodeURIComponent(job)}`);
+  statusEl.textContent = '连接中…';
+  ws.onopen = () => { statusEl.textContent = '已连接 · 实时'; };
+  ws.onclose = () => { statusEl.textContent = '已断开'; };
+  ws.onerror = () => { statusEl.textContent = '连接错误'; };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === 'question') {
+      currentQ = m.question;
+      addLine(`<strong>Q${m.turn}</strong> ${m.question}`, 'q');
+      speak(m.question);
+    } else if (m.type === 'gate') {
+      addLine(`门禁：${m.ok ? '通过' : '未通过'} — ${m.reason} <code>${(m.evidence_ids||[]).join(', ')}</code>`,
+        m.ok ? 'gate-ok' : 'gate-bad');
+    } else if (m.type === 'coding_feedback') {
+      document.getElementById('codeFb').textContent = (m.hints || []).join('\n');
+    } else if (m.type === 'error') {
+      addLine('错误：' + m.message, 'gate-bad');
+    }
+  };
+}
+
+document.getElementById('btnStart').onclick = () => { logEl.innerHTML=''; connect(); };
+document.getElementById('btnSpeak').onclick = () => speak(currentQ || '暂无题目');
+document.getElementById('btnSend').onclick = () => {
+  if (!ws || ws.readyState !== 1) return alert('请先开始面试');
+  const text = document.getElementById('answer').value.trim();
+  if (!text) return;
+  addLine(text, 'a');
+  ws.send(JSON.stringify({ type: 'answer', text }));
+  document.getElementById('answer').value = '';
+};
+document.getElementById('btnMic').onclick = () => {
+  if (!Rec) return alert('浏览器不支持 Web Speech ASR，请改用打字');
+  const r = new Rec();
+  r.lang = 'zh-CN';
+  r.onresult = (e) => {
+    document.getElementById('answer').value = e.results[0][0].transcript;
+  };
+  r.start();
+  statusEl.textContent = '正在听…';
+  r.onend = () => { statusEl.textContent = ws && ws.readyState===1 ? '已连接 · 实时' : '未连接'; };
+};
+
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tab-chat').style.display = tab === 'chat' ? '' : 'none';
+    document.getElementById('tab-code').style.display = tab === 'code' ? '' : 'none';
+    if (tab === 'code' && !monacoEditor) {
+      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }});
+      require(['vs/editor/editor.main'], function () {
+        monacoEditor = monaco.editor.create(document.getElementById('editor'), {
+          value: 'def solve(nums):\n    # TODO\n    return nums\n',
+          language: 'python',
+          theme: 'vs',
+          minimap: { enabled: false },
+        });
+      });
+    }
+  };
+});
+
+document.getElementById('btnCode').onclick = () => {
+  if (!ws || ws.readyState !== 1) return alert('请先开始面试');
+  const code = monacoEditor ? monacoEditor.getValue() : '';
+  ws.send(JSON.stringify({ type: 'coding_submit', code }));
+};
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+}
+loadJobs();
+</script>
+</body>
+</html>
