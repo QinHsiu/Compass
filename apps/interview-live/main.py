@@ -27,6 +27,13 @@ from compass_core.interview import (  # noqa: E402
     next_followup,
     opening_question,
 )
+from compass_core.life import (  # noqa: E402
+    answer_life,
+    explore_life,
+    export_life_html,
+    load_life_report,
+    refine_plan,
+)
 from compass_core.llm import describe_config  # noqa: E402
 from compass_core.match import match_and_save  # noqa: E402
 from compass_core.paths import content_root, ensure_dirs  # noqa: E402
@@ -39,7 +46,7 @@ HERE = Path(__file__).resolve().parent
 STATIC = HERE / "static"
 REPO = HERE.parents[1]
 
-app = FastAPI(title="Compass Web", version="0.6.0")
+app = FastAPI(title="Compass Web", version="0.7.0")
 if STATIC.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
@@ -134,7 +141,15 @@ def index():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "root": str(_root()), "ui": "websocket-web", "version": "0.6.0"}
+    return {"ok": True, "root": str(_root()), "ui": "websocket-web", "version": "0.7.0"}
+
+
+@app.get("/api/life/{session_id}/report")
+def api_life_report(session_id: str):
+    try:
+        return load_life_report(_root(), session_id)
+    except FileNotFoundError:
+        return JSONResponse({"ok": False, "error": "session not found"}, status_code=404)
 
 
 @app.get("/api/meta")
@@ -235,6 +250,27 @@ async def api_ingest(file: UploadFile = File(...)):
         drafts = split_resume_to_evidence_drafts(text)
         n = _write_evidence_drafts(root, drafts)
         return {"ok": True, "count": n, "preview": text[:3000], "warnings": warnings}
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+@app.post("/api/life/extract")
+async def api_life_extract(file: UploadFile = File(...)):
+    """Extract text for /life without writing evidence drafts."""
+    suffix = Path(file.filename or "upload.bin").suffix or ".bin"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        path = tmp.name
+    try:
+        result = extract_text(path)
+        text = result.get("text") or ""
+        warnings = result.get("warnings") or []
+        if not text.strip():
+            return JSONResponse({"ok": False, "warnings": warnings}, status_code=400)
+        return {"ok": True, "text": text, "preview": text[:8000], "warnings": warnings}
     finally:
         try:
             os.unlink(path)
@@ -345,6 +381,63 @@ async def ws_app(websocket: WebSocket):
                     jid = jobs[-1].parent.name
                 out = export_report(root, jid, want_pdf=True)
                 await websocket.send_json({"type": "export_done", **out})
+                continue
+            if mtype == "life_explore":
+                text = (msg.get("text") or "").strip()
+                sid = (msg.get("session_id") or None) or None
+                if not text:
+                    await websocket.send_json(
+                        {"type": "error", "step": "life", "message": "empty life narrative"}
+                    )
+                    continue
+                try:
+                    await websocket.send_json({"type": "progress", "step": "life"})
+                    out = explore_life(root, text=text, session_id=sid)
+                    await websocket.send_json({"type": "life_done", **out})
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "step": "life", "message": str(e)})
+                continue
+            if mtype == "life_answer":
+                sid = (msg.get("session_id") or "").strip()
+                answers = msg.get("answers") or {}
+                if not sid:
+                    await websocket.send_json(
+                        {"type": "error", "step": "life", "message": "missing session_id"}
+                    )
+                    continue
+                try:
+                    await websocket.send_json({"type": "progress", "step": "life_score"})
+                    out = answer_life(root, sid, answers)
+                    await websocket.send_json({"type": "life_done", **out})
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "step": "life", "message": str(e)})
+                continue
+            if mtype == "life_refine":
+                sid = (msg.get("session_id") or "").strip()
+                message = (msg.get("message") or "").strip()
+                if not sid or not message:
+                    await websocket.send_json(
+                        {"type": "error", "step": "life", "message": "need session_id and message"}
+                    )
+                    continue
+                try:
+                    out = refine_plan(root, sid, message)
+                    await websocket.send_json({"type": "life_refine_done", **out})
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "step": "life", "message": str(e)})
+                continue
+            if mtype == "life_export":
+                sid = (msg.get("session_id") or "").strip()
+                if not sid:
+                    await websocket.send_json(
+                        {"type": "error", "step": "life", "message": "missing session_id"}
+                    )
+                    continue
+                try:
+                    out = export_life_html(root, sid)
+                    await websocket.send_json({"type": "life_export_done", **out})
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "step": "life", "message": str(e)})
                 continue
             await websocket.send_json({"type": "error", "message": f"unknown type {mtype}"})
     except WebSocketDisconnect:

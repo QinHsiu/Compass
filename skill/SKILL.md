@@ -2,10 +2,11 @@
 name: compass
 version: 0.2.0
 description: >-
-  Evidence-driven job compass: job discovery, resume patching with 12 JSON Resume
-  themes, interview simulation with searchable open question bank, and gap
-  diagnosis. Activated by /intake, /evidence, /discover, /resume, /interview,
-  /diagnose, /bridge, /track, or /desk. Use for 求职, 简历模板, 简历修改, 模拟面试,
+  Evidence-driven job compass: interest/career explore (/life, Holland RIASEC),
+  job discovery, resume patching with 12 JSON Resume themes, interview simulation
+  with searchable open question bank, and gap diagnosis. Activated by /life,
+  /intake, /evidence, /discover, /resume, /interview, /diagnose, /bridge, /track,
+  or /desk. Use for 职业探索, 生涯规划, 求职, 简历模板, 简历修改, 模拟面试,
   题库检索, JD匹配, 缺口诊断, 投递跟踪 — never invent experience.
 ---
 
@@ -37,6 +38,7 @@ If the user omits a slash command, **ask** which command to use before proceedin
 
 | Command | Mode |
 |---------|------|
+| `/life` | Interest explore → career plan (direct or RIASEC quiz) |
 | `/intake` | Profile + constraints + import resume text |
 | `/evidence` | Split/store verifiable experience items |
 | `/discover` | Import/collect jobs → match → shortlist |
@@ -48,8 +50,8 @@ If the user omits a slash command, **ask** which command to use before proceedin
 | `/desk` | Start light local board |
 | `/studio` | Optional Gradio UI (legacy; prefer Web) |
 
-CLI primary UI: `web` / `live` (WebSocket workbench on :8766).  
-Also: `rag-index`, `questions --semantic`, `timeline`, `export-report`, `llm-info`, `crawl-llm`.
+CLI primary UI: `web` / `live` (WebSocket workbench on :8766) — includes **职业探索** view.  
+Also: `life`, `rag-index`, `questions --semantic`, `timeline`, `export-report`, `llm-info`, `crawl-llm`.
 
 Strip the slash command; remaining text is the payload (JD, notes, job_id, etc.).
 
@@ -78,6 +80,28 @@ Given existing profile + evidence:
 ---
 
 ## Module Workflows
+
+### `/life`
+
+1. User pastes a life/career narrative or points to a file (pdf/txt/md/docx).
+2. Run confidence routing (rule-based signals: domain/skills, education/tenure, constraints):
+
+```bash
+python -m compass_core.cli life explore --root content --text "..." 
+# or --text-file story.txt / --file resume.pdf
+```
+
+3. If `route=direct` (confidence ≥ 0.72 and ≥3 signal classes): write detailed plan + RIASEC-inferred scores.
+4. Else: present Holland RIASEC Likert quiz (`assets/life/riasec_zh.json`), then:
+
+```bash
+python -m compass_core.cli life answer --root content --session <id> --answers-file answers.json
+```
+
+5. Both paths produce analysis, dimensional scores, paths, 90-day actions under `content/life/{session_id}/`.
+6. Optional refine / export HTML; hand off target roles into Web「求职准备」.
+
+Do not invent credentials. Mark uncertain inferences `UNVERIFIED`. Quiz is adapted RIASEC, not commercial SDS.
 
 ### `/intake`
 
@@ -198,6 +222,7 @@ content/
   profile/profile.json
   evidence/{id}.md
   evidence/index.json
+  life/{session_id}/input.md|extract.json|scores.json|plan.json|report.md|export/
   jobs/{job_id}/jd.md
   jobs/{job_id}/match.json
   resumes/{job_id}/resume.json|md|patch.*|ats_report.json

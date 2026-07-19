@@ -24,6 +24,7 @@
     </label>
     <button class="nav-btn active" data-view="home" data-i18n="navHome">总览</button>
     <button class="nav-btn" data-view="ingest" data-i18n="navIngest">上传简历</button>
+    <button class="nav-btn" data-view="life" data-i18n="navLife">职业探索</button>
     <button class="nav-btn" data-view="pipeline" data-i18n="navPipeline">求职准备</button>
     <button class="nav-btn" data-view="interview" data-i18n="navInterview">模拟面试</button>
     <button class="nav-btn" data-view="bank" data-i18n="navBank">题库</button>
@@ -47,9 +48,69 @@
         <h2 data-i18n="connTitle"></h2>
         <p class="desc" id="connStatus" data-i18n="connConnecting"></p>
         <div class="row">
+          <button class="primary" id="btnGoLife" data-i18n="btnLife"></button>
           <button class="primary" id="btnGoPipe" data-i18n="btnPipe"></button>
           <button class="ghost" id="btnGoLive" data-i18n="btnLive"></button>
           <a class="btn ghost" id="btnGraph" href="/timeline" target="_blank" data-i18n="btnGraph"></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-life">
+      <div class="panel">
+        <h2 data-i18n="lifeTitle">兴趣探索 · 职业规划</h2>
+        <p class="desc" data-i18n="lifeDesc"></p>
+        <div class="grid-2">
+          <div class="field-card">
+            <label data-i18n="lifeLabelFile">经历文件</label>
+            <input type="file" id="lifeFile" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.docx"/>
+            <div class="row" style="margin-top:12px">
+              <button class="ghost" id="btnLifeFile" data-i18n="lifeBtnFile">解析文件到文本框</button>
+            </div>
+          </div>
+          <div class="field-card">
+            <label data-i18n="lifeLabelPaste">经历描述</label>
+            <textarea id="lifeIn" data-i18n-placeholder="lifePh" style="min-height:140px"></textarea>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary" id="btnLifeExplore" data-i18n="lifeBtnExplore">开始探索</button>
+          <span class="status" id="lifeStatus"></span>
+        </div>
+        <div class="life-route" id="lifeRoute" hidden></div>
+      </div>
+
+      <div class="panel" id="lifeQuizPanel" hidden>
+        <h2 data-i18n="lifeQuizTitle">Holland RIASEC 测评</h2>
+        <p class="desc" data-i18n="lifeQuizDesc"></p>
+        <div id="lifeQuiz" class="life-quiz"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="primary" id="btnLifeSubmit" data-i18n="lifeBtnSubmit">提交测评</button>
+        </div>
+      </div>
+
+      <div class="panel" id="lifeReportPanel" hidden>
+        <div class="metrics" id="lifeMetrics">
+          <div class="metric"><span class="metric-label" data-i18n="lifeMetricCode">Holland 码</span><strong id="lifeCode">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="lifeMetricConf">置信度</span><strong id="lifeConf">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="lifeMetricRoute">路径</span><strong id="lifeRouteLabel">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="lifeMetricSession">会话</span><strong id="lifeSid" style="font-size:.85rem">—</strong></div>
+        </div>
+        <div class="life-viz" id="lifeViz"></div>
+        <div class="life-dims" id="lifeDims"></div>
+        <div class="life-paths" id="lifePaths"></div>
+        <article class="prose" id="lifeReport"></article>
+        <div class="row life-actions">
+          <button class="primary" id="btnLifeHandoff" data-i18n="lifeBtnHandoff">一键进入求职准备</button>
+          <button class="ghost" id="btnLifeExport" data-i18n="lifeBtnExport">导出 HTML 报告</button>
+        </div>
+        <div class="life-chat">
+          <h3 data-i18n="lifeRefineTitle">基于结果继续追问</h3>
+          <textarea id="lifeRefineIn" data-i18n-placeholder="lifeRefinePh" style="min-height:80px"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="primary" id="btnLifeRefine" data-i18n="lifeBtnRefine">发送</button>
+          </div>
+          <div id="lifeChat" class="life-chat-log"></div>
         </div>
       </div>
     </section>

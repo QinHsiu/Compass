@@ -15,6 +15,7 @@
 | G1 | ASR accuracy | `/api/asr` + record button | ✅ |
 | G2 | RAG metrics | `rag-eval` + fixtures | ✅ |
 | G3/G4 | Lock + export | requirements-* + quadrant HTML | ✅ |
+| H1 | Career explore | `/life` + RIASEC + Web 职业探索 | ✅ |
 
 ## Commands
 
@@ -22,6 +23,7 @@
 cp .env.example .env
 docker compose up --build
 python -m compass_core.cli web --root content
+python -m compass_core.cli life explore --root content --text-file story.txt
 python -m compass_core.cli rag-eval --root content
 python -m compass_core.cli export-report --root content
 python -m compass_core.cli timeline --root content --html content/timeline.html

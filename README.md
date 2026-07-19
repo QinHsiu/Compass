@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.6.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.7.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -78,8 +78,9 @@ HF Space：[README_SPACE.md](README_SPACE.md) · 传播文：[docs/launch_articl
 
 | 区 | 做什么 |
 |:---|:-------|
+| **职业探索** | 经历/文件 → 置信度分流 → 直接规划或 Holland RIASEC 测评 → 六维可视化与交互报告 → 一键进求职准备 |
 | 上传简历 | PDF / 图片 / 文本 → 证据草稿 |
-| 求职流水线 | JD → 匹配 · 主题简历 · 面试包 · 诊断 · 图谱 |
+| 求职准备 | JD → 匹配 · 主题简历 · 面试包 · 诊断 · 图谱 |
 | 实时面试 | WebSocket 追问 + Web Speech + Monaco |
 | 题库 | Token / 语义 RAG |
 | 证据图谱 | `/timeline` |
@@ -120,6 +121,7 @@ flowchart LR
 
 | Skill | CLI | 作用 |
 |:------|:----|:-----|
+| `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` | 证据索引 |
 | `/discover` | `discover` | 岗位导入 |
@@ -127,7 +129,8 @@ flowchart LR
 | `/interview` | `interview-pack` | 面试包 |
 | `/diagnose` | `diagnose` | 缺口罗盘 |
 | `/desk` | `desk` | 轻量看板 |
-| — | `studio` | **Gradio 主界面** |
+| — | `web` / `live` | **Web 主界面** |
+| — | `studio` | Gradio（可选） |
 | — | `crawl-llm` | 刷新 LLM/Agent 题 |
 
 完整 Skill：[skill/SKILL.md](skill/SKILL.md)

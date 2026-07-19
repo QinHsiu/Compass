@@ -318,3 +318,59 @@ def test_rss_and_career_fixtures(root: Path, tmp_path: Path):
     assert len(links) >= 1
     for t in links:
         mas(root, f"职位：{t}\n公司：example.ai\n")
+
+
+def test_life_riasec_score():
+    from compass_core.life import load_riasec_bank, score_riasec
+
+    bank = load_riasec_bank()
+    assert len(bank["questions"]) >= 36
+    from collections import Counter
+
+    assert Counter(q["dim"] for q in bank["questions"]) == {
+        "R": 6,
+        "I": 6,
+        "A": 6,
+        "S": 6,
+        "E": 6,
+        "C": 6,
+    }
+    answers = {q["id"]: (5 if q["dim"] == "I" else 2) for q in bank["questions"]}
+    scored = score_riasec(answers)
+    assert scored["scores"]["I"] > scored["scores"]["R"]
+    assert scored["holland_code"].startswith("I")
+    assert scored["answered"] == len(bank["questions"])
+
+
+def test_life_confidence_route(root: Path):
+    from compass_core.life import answer_life, assess_confidence, explore_life
+
+    thin = "我想找工作。"
+    a = assess_confidence(thin)
+    assert a["route"] == "assessment"
+    assert a["confidence"] < 0.72
+
+    rich = (
+        "我是计算机硕士，在北京做了 4 年 Python 后端与机器学习平台开发，"
+        "熟悉 PyTorch、Kubernetes 与数据管道。希望在人工智能赛道升职或转算法工程，"
+        "目标城市上海或远程，薪资看机会。"
+    )
+    b = assess_confidence(rich)
+    assert b["signal_classes"] >= 3
+    assert b["route"] == "direct"
+    assert b["confidence"] >= 0.72
+
+    out = explore_life(root, text=thin)
+    assert out["need_assessment"] is True
+    assert out["questions"]
+    answers = {q["id"]: 4 for q in out["questions"]}
+    answered = answer_life(root, out["session_id"], answers)
+    assert answered["ready"]
+    assert (root / "life" / out["session_id"] / "report.md").is_file()
+    assert answered["plan"]["paths"]
+
+    direct = explore_life(root, text=rich)
+    assert direct["ready"] is True
+    assert direct["route"] == "direct"
+    assert direct["plan"]["scores"]
+    assert (root / "life" / direct["session_id"] / "export" / "report.html").is_file()

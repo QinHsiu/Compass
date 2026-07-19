@@ -62,6 +62,9 @@ content/questions/*
 content/rag/*
 !content/rag/.gitkeep
 
+content/life/*
+!content/life/.gitkeep
+
 # Crawl snapshots can be regenerated
 collectors/snapshots/
 

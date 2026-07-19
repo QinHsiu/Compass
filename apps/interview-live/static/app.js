@@ -7,6 +7,9 @@
   let t = I18N[lang];
   let lastMeta = null;
   let lastPipeline = null;
+  let lifeSessionId = "";
+  let lifePlan = null;
+  let lifeQuestions = [];
 
   const toast = (msg) => {
     const el = $("toast");
@@ -224,6 +227,115 @@
   });
   $("btnGoPipe").onclick = () => showView("pipeline");
   $("btnGoLive").onclick = () => showView("interview");
+  if ($("btnGoLife")) $("btnGoLife").onclick = () => showView("life");
+
+  function lifeRadarSvg(scores) {
+    const dims = ["R", "I", "A", "S", "E", "C"];
+    const size = 260;
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size * 0.36;
+    const pts = dims.map((d, i) => {
+      const ang = -Math.PI / 2 + (2 * Math.PI * i) / dims.length;
+      const val = Math.max(0, Math.min(100, Number(scores?.[d] || 0))) / 100;
+      return `${cx + r * val * Math.cos(ang)},${cy + r * val * Math.sin(ang)}`;
+    });
+    let axes = "";
+    let labels = "";
+    dims.forEach((d, i) => {
+      const ang = -Math.PI / 2 + (2 * Math.PI * i) / dims.length;
+      const x = cx + r * Math.cos(ang);
+      const y = cy + r * Math.sin(ang);
+      const lx = cx + (r + 20) * Math.cos(ang);
+      const ly = cy + (r + 20) * Math.sin(ang);
+      axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#cbd5e1"/>`;
+      labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#334155">${d} ${scores?.[d] ?? 0}</text>`;
+    });
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e2e8f0"/>
+      ${axes}
+      <polygon points="${pts.join(" ")}" fill="rgba(43,109,229,.25)" stroke="#2b6de5" stroke-width="2"/>
+      ${labels}
+    </svg>`;
+  }
+
+  function renderLifeQuiz(questions) {
+    lifeQuestions = questions || [];
+    const box = $("lifeQuiz");
+    box.innerHTML = "";
+    const scale = t.lifeScale || ["1", "2", "3", "4", "5"];
+    lifeQuestions.forEach((q, idx) => {
+      const row = document.createElement("div");
+      row.className = "life-q";
+      const opts = [1, 2, 3, 4, 5]
+        .map(
+          (v) =>
+            `<label class="life-likert"><input type="radio" name="lq_${esc(q.id)}" value="${v}" ${
+              v === 3 ? "checked" : ""
+            }/><span>${esc(scale[v - 1] || String(v))}</span></label>`
+        )
+        .join("");
+      row.innerHTML =
+        `<div class="life-q-text"><span class="life-q-n">${idx + 1}.</span> ${esc(q.text)} ` +
+        `<code>${esc(q.dim)}</code></div><div class="life-likert-row">${opts}</div>`;
+      box.appendChild(row);
+    });
+  }
+
+  function collectLifeAnswers() {
+    const answers = {};
+    lifeQuestions.forEach((q) => {
+      const el = document.querySelector(`input[name="lq_${q.id}"]:checked`);
+      answers[q.id] = el ? Number(el.value) : 3;
+    });
+    return answers;
+  }
+
+  function renderLifeReport(m) {
+    const plan = m.plan || {};
+    lifePlan = plan;
+    lifeSessionId = m.session_id || plan.session_id || lifeSessionId;
+    $("lifeReportPanel").hidden = false;
+    $("lifeCode").textContent = m.holland_code || plan.holland_code || "—";
+    $("lifeConf").textContent =
+      plan.confidence != null ? String(plan.confidence) : m.confidence != null ? String(m.confidence) : "—";
+    $("lifeRouteLabel").textContent = m.route || plan.route || "—";
+    $("lifeSid").textContent = lifeSessionId || "—";
+    const scores = m.scores || plan.scores || {};
+    $("lifeViz").innerHTML = `<div class="life-radar">${lifeRadarSvg(scores)}</div>`;
+    const dims = plan.dimensions || [];
+    $("lifeDims").innerHTML = dims
+      .map((d) => {
+        const sc = d.score ?? scores[d.code] ?? 0;
+        return `<div class="life-dim"><div class="life-dim-h"><strong>${esc(d.code)}</strong> ${esc(
+          d.name || ""
+        )} <span>${sc}</span></div><div class="bar"><i style="width:${sc}%"></i></div><p>${esc(
+          d.blurb || ""
+        )}</p></div>`;
+      })
+      .join("");
+    $("lifePaths").innerHTML = (plan.paths || [])
+      .map(
+        (p) =>
+          `<article class="life-path-card"><h3>${esc(p.title)}</h3>` +
+          `<p class="meta">${t.lifeMetricCode}: ${esc(String(p.holland_focus))} · ${p.fit_score}</p>` +
+          `<p>${esc(p.why || "")}</p>` +
+          `<p class="roles">${esc((p.roles || []).join(" · "))}</p></article>`
+      )
+      .join("");
+    $("lifeReport").innerHTML = renderMd(m.report_md || "");
+  }
+
+  function showLifeRoute(extract, route) {
+    const el = $("lifeRoute");
+    el.hidden = false;
+    const conf = extract?.confidence ?? "—";
+    const reason = extract?.reason || "";
+    const label = route === "direct" ? t.lifeRouteDirect : t.lifeRouteAssess;
+    el.innerHTML =
+      `<strong>${esc(label)}</strong> · ${t.lifeMetricConf} ${esc(String(conf))}` +
+      (reason ? `<p class="desc">${esc(reason)}</p>` : "");
+  }
 
   document.querySelectorAll(".result-tab").forEach((btn) => {
     btn.onclick = () => showResultTab(btn.dataset.rtab);
@@ -259,9 +371,42 @@
           ingest: t.stepIngest,
           demo: t.stepDemo,
           match: t.stepMatch,
+          life: t.lifeRunning,
+          life_score: t.lifeScoring,
         };
         $("pipeStatus").textContent = stepMap[m.step] || m.message || t.pipeRunning;
         if (m.step === "ingest") $("ingestStatus").textContent = t.stepIngest;
+        if (m.step === "life" || m.step === "life_score") {
+          $("lifeStatus").textContent = stepMap[m.step];
+        }
+      } else if (m.type === "life_done") {
+        lifeSessionId = m.session_id || "";
+        showLifeRoute(m.extract, m.route);
+        if (m.need_assessment || (!m.ready && m.questions)) {
+          $("lifeQuizPanel").hidden = false;
+          $("lifeReportPanel").hidden = true;
+          renderLifeQuiz(m.questions || []);
+          $("lifeStatus").textContent = t.lifeRouteAssess;
+        }
+        if (m.ready && m.plan) {
+          $("lifeQuizPanel").hidden = true;
+          renderLifeReport(m);
+          $("lifeStatus").textContent = t.lifeToastReady;
+          toast(t.lifeToastReady);
+        }
+      } else if (m.type === "life_refine_done") {
+        const chat = $("lifeChat");
+        const block = document.createElement("div");
+        block.className = "life-chat-item";
+        block.innerHTML =
+          `<div class="a">${esc(($("lifeRefineIn").value || "").trim())}</div>` +
+          `<div class="q">${esc(m.reply || "")}</div>`;
+        chat.appendChild(block);
+        $("lifeRefineIn").value = "";
+        if (m.plan) renderLifeReport(m);
+      } else if (m.type === "life_export_done") {
+        $("lifeStatus").textContent = `${t.lifeToastExport}\n${m.html || ""}`;
+        toast(t.lifeToastExport);
       } else if (m.type === "pipeline_done") {
         lastJobId = m.job_id;
         $("pipeStatus").textContent = `${t.pipeDone} · ${m.job_id}`;
@@ -299,9 +444,65 @@
         toast(msg);
         $("pipeStatus").textContent = msg;
         $("ingestStatus").textContent = msg;
+        if (m.step === "life") $("lifeStatus").textContent = msg;
       }
     };
   }
+
+  $("btnLifeExplore").onclick = () => {
+    const text = ($("lifeIn").value || "").trim();
+    if (!text) return toast(t.lifeNeedText);
+    $("lifeStatus").textContent = t.lifeRunning;
+    $("lifeQuizPanel").hidden = true;
+    $("lifeReportPanel").hidden = true;
+    sendApp({ type: "life_explore", text, session_id: lifeSessionId || undefined });
+  };
+  $("btnLifeSubmit").onclick = () => {
+    if (!lifeSessionId) return toast(t.lifeNeedText);
+    $("lifeStatus").textContent = t.lifeScoring;
+    sendApp({ type: "life_answer", session_id: lifeSessionId, answers: collectLifeAnswers() });
+  };
+  $("btnLifeRefine").onclick = () => {
+    const message = ($("lifeRefineIn").value || "").trim();
+    if (!lifeSessionId || !message) return;
+    sendApp({ type: "life_refine", session_id: lifeSessionId, message });
+  };
+  $("btnLifeExport").onclick = () => {
+    if (!lifeSessionId) return;
+    sendApp({ type: "life_export", session_id: lifeSessionId });
+  };
+  $("btnLifeHandoff").onclick = () => {
+    const hint = lifePlan?.handoff_jd_hint || "";
+    if (hint) $("jdIn").value = hint;
+    showView("pipeline");
+    toast(t.lifeToastHandoff);
+  };
+  $("btnLifeFile").onclick = async () => {
+    const f = $("lifeFile").files?.[0];
+    if (!f) return toast(t.toastNeedFile);
+    const fd = new FormData();
+    fd.append("file", f);
+    $("lifeStatus").textContent = t.ingestRunning;
+    try {
+      const r = await fetch("/api/life/extract", { method: "POST", body: fd });
+      const data = await r.json();
+      const preview = data.text || data.preview || "";
+      if (!data.ok || !preview) {
+        $("lifeStatus").textContent = (data.warnings || []).join("; ") || t.errPrefix;
+        return;
+      }
+      $("lifeIn").value = preview.slice(0, 20000);
+      $("lifeStatus").textContent = t.lifeBtnExplore;
+    } catch (e) {
+      try {
+        const raw = await f.text();
+        $("lifeIn").value = raw.slice(0, 20000);
+        $("lifeStatus").textContent = t.lifeBtnExplore;
+      } catch (e2) {
+        $("lifeStatus").textContent = String(e);
+      }
+    }
+  };
 
   function sendApp(obj) {
     if (!appWs || appWs.readyState !== 1) {

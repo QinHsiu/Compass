@@ -351,6 +351,44 @@ def cmd_pipeline(args) -> int:
     return 0
 
 
+def cmd_life(args) -> int:
+    from .life import answer_life, explore_life, export_life_html, load_life_report, refine_plan
+
+    root = _root(args)
+    action = args.life_action
+    if action == "explore":
+        text = None
+        if args.text:
+            text = args.text
+        elif args.text_file:
+            text = Path(args.text_file).read_text(encoding="utf-8")
+        out = explore_life(root, text=text, file_path=args.file, session_id=args.session)
+        # trim questions in CLI noise unless assessment needed
+        if out.get("ready") and "questions" in out:
+            out = {k: v for k, v in out.items() if k != "questions"}
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "answer":
+        answers = json.loads(Path(args.answers_file).read_text(encoding="utf-8"))
+        out = answer_life(root, args.session, answers)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "refine":
+        out = refine_plan(root, args.session, args.message or "")
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "export":
+        out = export_life_html(root, args.session)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "show":
+        out = load_life_report(root, args.session)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown life action {action}"}, ensure_ascii=False))
+    return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument("--root", default=None, help="content root (or COMPASS_ROOT)")
@@ -462,6 +500,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pipe.add_argument("--text-file", required=True)
     pipe.set_defaults(func=cmd_pipeline)
+
+    life = sub.add_parser("life", parents=[parent], help="interest explore → career plan (/life)")
+    life_sub = life.add_subparsers(dest="life_action", required=True)
+    le = life_sub.add_parser("explore", help="ingest narrative + confidence route (+ direct plan)")
+    le.add_argument("--text", default=None)
+    le.add_argument("--text-file", default=None)
+    le.add_argument("--file", default=None, help="pdf/docx/txt/md path")
+    le.add_argument("--session", default=None)
+    le.set_defaults(func=cmd_life)
+    la = life_sub.add_parser("answer", help="submit RIASEC answers JSON")
+    la.add_argument("--session", required=True)
+    la.add_argument("--answers-file", required=True, help='JSON {qid:1-5} or [{"id","value"}]')
+    la.set_defaults(func=cmd_life)
+    lr = life_sub.add_parser("refine", help="interactive follow-up on a plan")
+    lr.add_argument("--session", required=True)
+    lr.add_argument("--message", required=True)
+    lr.set_defaults(func=cmd_life)
+    lx = life_sub.add_parser("export", help="write HTML radar report")
+    lx.add_argument("--session", required=True)
+    lx.set_defaults(func=cmd_life)
+    ls = life_sub.add_parser("show", help="load saved life report")
+    ls.add_argument("--session", required=True)
+    ls.set_defaults(func=cmd_life)
 
     return p
 

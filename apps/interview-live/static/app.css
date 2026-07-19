@@ -375,6 +375,89 @@ label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6
 }
 .toast.show { opacity: 1; }
 
+.life-route {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eef4ff;
+  border: 1px solid #c9daf8;
+  font-size: .95rem;
+}
+.life-quiz { display: flex; flex-direction: column; gap: 14px; max-height: 520px; overflow: auto; }
+.life-q {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafbfd;
+}
+.life-q-text { margin-bottom: 10px; line-height: 1.45; }
+.life-q-n { color: var(--muted); margin-right: 4px; }
+.life-likert-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.life-likert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .78rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.life-likert input { accent-color: var(--blue); }
+.life-viz { display: flex; justify-content: center; margin: 16px 0; }
+.life-radar {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+}
+.life-dims {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.life-dim {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.life-dim-h { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; margin-bottom: 6px; }
+.life-dim .bar { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.life-dim .bar i { display: block; height: 100%; background: var(--blue); }
+.life-dim p { margin: 8px 0 0; font-size: .82rem; color: var(--muted); }
+.life-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.life-path-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.life-path-card h3 { margin: 0 0 6px; font-size: 1rem; }
+.life-path-card .meta { color: var(--muted); font-size: .85rem; margin: 0 0 8px; }
+.life-path-card .roles { font-size: .85rem; color: #334155; }
+.life-actions { margin: 16px 0; }
+.life-chat { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.life-chat h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.life-chat-log { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.life-chat-item .a {
+  background: #eef4ff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.life-chat-item .q {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .side {

@@ -31,5 +31,6 @@ def ensure_dirs(root: Path) -> None:
         "diagnoses",
         "track",
         "fixtures",
+        "life",
     ):
         (root / name).mkdir(parents=True, exist_ok=True)
