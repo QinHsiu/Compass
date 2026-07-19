@@ -10,7 +10,7 @@ from .jd import ParsedJD
 from .match import MatchResult
 
 
-def build_pack(root: Path, job_id: str) -> dict:
+def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
     job_dir = root / "jobs" / job_id
     jd_data = json.loads((job_dir / "jd.json").read_text(encoding="utf-8"))
     match_data = json.loads((job_dir / "match.json").read_text(encoding="utf-8"))
@@ -33,14 +33,14 @@ def build_pack(root: Path, job_id: str) -> dict:
             }
         )
 
-    from .questions import infer_topics, search_questions
+    from .questions import enrich_hits, infer_topics, search_questions
 
     topics = infer_topics(jd.keywords)
     query = " ".join(jd.keywords + jd.hard_requirements[:5] + [jd.title])
     try:
         from .rag import semantic_search
 
-        bank_hits = semantic_search(root, query, k=12)
+        bank_hits = semantic_search(root, query, k=12, lang=lang)
         if not bank_hits:
             raise RuntimeError("empty semantic")
     except Exception:
@@ -50,7 +50,9 @@ def build_pack(root: Path, job_id: str) -> dict:
             topics=topics,
             limit=12,
             extra_root=root,
+            lang=lang,
         )
+    bank_hits = enrich_hits(bank_hits, lang=lang)
 
     pack = {
         "job_id": job_id,
@@ -63,12 +65,13 @@ def build_pack(root: Path, job_id: str) -> dict:
         "evidence": hit_details,
         "bank_topics": topics,
         "bank_hits": bank_hits,
+        "lang": lang,
     }
     return pack
 
 
 def render_session(pack: dict) -> str:
-    from .questions import format_bank_section
+    from .questions import bank_section_title, format_bank_section
 
     ev_list = "\n".join(
         f"- `{e['evidence_id']}` {e['title']}" for e in pack.get("evidence") or []
@@ -121,10 +124,10 @@ def render_session(pack: dict) -> str:
 ### Stress follow-ups
 {chr(10).join(stress) or '- （暂无）'}
 
-### Retrieved bank questions
+{bank_section_title(pack.get('lang') or 'zh')}
 Topics: {', '.join(pack.get('bank_topics') or []) or '—'}
 
-{format_bank_section(pack.get('bank_hits') or [])}
+{format_bank_section(pack.get('bank_hits') or [], lang=pack.get('lang') or 'zh')}
 ## Scorecard
 
 | Dimension | Score 1-5 | Notes | evidence_ids |
@@ -136,8 +139,8 @@ Topics: {', '.join(pack.get('bank_topics') or []) or '—'}
 """
 
 
-def interview_and_save(root: Path, job_id: str) -> dict:
-    pack = build_pack(root, job_id)
+def interview_and_save(root: Path, job_id: str, lang: str = "zh") -> dict:
+    pack = build_pack(root, job_id, lang=lang)
     out = root / "interviews" / job_id
     out.mkdir(parents=True, exist_ok=True)
     (out / "pack.json").write_text(json.dumps(pack, ensure_ascii=False, indent=2), encoding="utf-8")

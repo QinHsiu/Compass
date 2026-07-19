@@ -45,10 +45,11 @@ If the user omits a slash command, **ask** which command to use before proceedin
 | `/diagnose` | Four-quadrant gap compass + next actions |
 | `/bridge` | Verifiable upskilling plan (not fake CV lines) |
 | `/track` | Application board state machine |
-| `/desk` | Start light local workbench |
-| `/studio` | Launch Gradio Studio (upload / voice / pipeline) |
+| `/desk` | Start light local board |
+| `/studio` | Optional Gradio UI (legacy; prefer Web) |
 
-CLI companions: `live` (WebSocket realtime interview), `rag-index` / `questions --semantic`, `timeline`, `llm-info`, `crawl-llm`.
+CLI primary UI: `web` / `live` (WebSocket workbench on :8766).  
+Also: `rag-index`, `questions --semantic`, `timeline`, `export-report`, `llm-info`, `crawl-llm`.
 
 Strip the slash command; remaining text is the payload (JD, notes, job_id, etc.).
 

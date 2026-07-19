@@ -5,194 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="theme-color" content="#2b6de5"/>
   <link rel="manifest" href="/static/manifest.webmanifest"/>
-  <title>Compass Interview Live</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <title>Compass</title>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
-  <style>
-    :root { --blue:#2b6de5; --ink:#1c2434; --muted:#6b7280; --bg:#f5f8fc; --line:#e6ebf2; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:"Noto Sans SC","DM Sans",system-ui,sans-serif; background:var(--bg); color:var(--ink); }
-    header { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; background:#fff; border-bottom:1px solid var(--line); }
-    header h1 { margin:0; font-size:1.2rem; color:var(--blue); }
-    header a { color:var(--muted); font-size:.9rem; }
-    main { max-width:960px; margin:0 auto; padding:20px; }
-    .panel { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    button, select { border:none; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer; }
-    button.primary { background:linear-gradient(180deg,#3b7cf0,var(--blue)); color:#fff; }
-    button.ghost { background:#eef4ff; color:var(--blue); }
-    #log { height:280px; overflow:auto; background:#fafcff; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:.95rem; }
-    .q { color:var(--blue); margin:8px 0; }
-    .a { color:var(--ink); margin:8px 0 12px; padding-left:8px; border-left:3px solid #c9d8f5; }
-    .gate-ok { color:#0f766e; } .gate-bad { color:#b91c1c; }
-    textarea { width:100%; min-height:90px; border-radius:10px; border:1px solid var(--line); padding:10px; font:inherit; }
-    #editor { height:260px; border:1px solid var(--line); border-radius:10px; margin-top:8px; }
-    .muted { color:var(--muted); font-size:.85rem; }
-    .tabs button { margin-right:6px; }
-    .tabs button.active { outline:2px solid var(--blue); }
-  </style>
 </head>
 <body>
-<header>
-  <h1>Compass · Interview Live</h1>
-  <div>
-    <a href="/timeline" target="_blank">证据时间线</a>
-    ·
-    <a href="/" id="pwaHint">PWA 可安装</a>
-  </div>
-</header>
-<main>
-  <div class="panel">
-    <div class="row">
-      <select id="job"></select>
-      <button class="primary" id="btnStart">开始实时面试</button>
-      <button class="ghost" id="btnSpeak">播报当前题</button>
-      <button class="ghost" id="btnMic">语音作答 (Web Speech)</button>
-      <span class="muted" id="status">未连接</span>
-    </div>
-  </div>
-  <div class="panel tabs">
-    <button class="ghost active" data-tab="chat">对话</button>
-    <button class="ghost" data-tab="code">代码面 (Monaco)</button>
-  </div>
-  <div id="tab-chat">
-    <div class="panel"><div id="log"></div></div>
-    <div class="panel">
-      <textarea id="answer" placeholder="输入回答（请引用 evidence_id）…"></textarea>
-      <div class="row" style="margin-top:10px">
-        <button class="primary" id="btnSend">发送回答</button>
+<div class="app">
+  <aside class="side">
+    <div class="brand">Compass <span data-i18n="brandSub">工作台</span></div>
+    <label class="lang-wrap">
+      <span class="lang-label">语言 / Language</span>
+      <select id="langSelect" aria-label="language">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="es">Español</option>
+      </select>
+    </label>
+    <button class="nav-btn active" data-view="home" data-i18n="navHome">总览</button>
+    <button class="nav-btn" data-view="ingest" data-i18n="navIngest">上传简历</button>
+    <button class="nav-btn" data-view="pipeline" data-i18n="navPipeline">求职准备</button>
+    <button class="nav-btn" data-view="interview" data-i18n="navInterview">模拟面试</button>
+    <button class="nav-btn" data-view="bank" data-i18n="navBank">题库</button>
+    <button class="nav-btn" data-view="about" data-i18n="navAbout">关于</button>
+    <div class="side-foot" data-i18n="sideFoot" data-i18n-html="1"></div>
+  </aside>
+
+  <div class="main">
+    <section class="view active" id="view-home">
+      <div class="hero">
+        <h1 data-i18n="heroTitle" data-i18n-html="1">专业求职准备，<em>证据驱动</em>每一步</h1>
+        <p data-i18n="heroSub"></p>
+        <div class="chips">
+          <span class="chip" data-i18n="chipGate"></span>
+          <span class="chip" data-i18n="chipFollow"></span>
+          <span class="chip" data-i18n="chipRag"></span>
+          <span class="chip" data-i18n="chipGraph"></span>
+        </div>
       </div>
-    </div>
-  </div>
-  <div id="tab-code" style="display:none">
-    <div class="panel">
-      <p class="muted">本地静态检查，不远程执行。适合白板/伪代码练习。</p>
-      <div id="editor"></div>
-      <div class="row" style="margin-top:10px">
-        <button class="primary" id="btnCode">提交代码检查</button>
+      <div class="panel">
+        <h2 data-i18n="connTitle"></h2>
+        <p class="desc" id="connStatus" data-i18n="connConnecting"></p>
+        <div class="row">
+          <button class="primary" id="btnGoPipe" data-i18n="btnPipe"></button>
+          <button class="ghost" id="btnGoLive" data-i18n="btnLive"></button>
+          <a class="btn ghost" id="btnGraph" href="/timeline" target="_blank" data-i18n="btnGraph"></a>
+        </div>
       </div>
-      <pre id="codeFb" class="muted"></pre>
-    </div>
+    </section>
+
+    <section class="view" id="view-ingest">
+      <div class="panel">
+        <h2 data-i18n="ingestTitle"></h2>
+        <p class="desc" data-i18n="ingestDesc"></p>
+        <div class="grid-2">
+          <div class="field-card">
+            <label data-i18n="labelFile"></label>
+            <input type="file" id="fileIn" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.docx"/>
+            <div class="row" style="margin-top:12px">
+              <button class="primary" id="btnUpload" data-i18n="btnUpload"></button>
+            </div>
+          </div>
+          <div class="field-card">
+            <label data-i18n="labelPaste"></label>
+            <textarea id="pasteIn" data-i18n-placeholder="phPaste"></textarea>
+            <div class="row" style="margin-top:12px">
+              <button class="primary" id="btnPaste" data-i18n="btnPaste"></button>
+            </div>
+          </div>
+        </div>
+        <p class="status" id="ingestStatus"></p>
+        <article class="prose" id="ingestPreview" hidden></article>
+      </div>
+    </section>
+
+    <section class="view" id="view-pipeline">
+      <div class="panel pipe-input">
+        <h2 data-i18n="pipeTitle"></h2>
+        <p class="desc" data-i18n="pipeDesc"></p>
+        <label data-i18n="labelJd"></label>
+        <textarea id="jdIn" data-i18n-placeholder="phJd"></textarea>
+        <div class="row pipe-actions">
+          <label class="inline-label">
+            <span data-i18n="labelTheme"></span>
+            <select id="themeIn">
+              <option value="tech_single" data-i18n="themeTech"></option>
+              <option value="ats_clean" data-i18n="themeAts"></option>
+              <option value="two_column" data-i18n="themeTwo"></option>
+              <option value="impact_first" data-i18n="themeImpact"></option>
+            </select>
+          </label>
+          <button class="primary" id="btnPipeline" data-i18n="btnRun"></button>
+          <button class="ghost" id="btnDemo" hidden data-i18n="btnDemo"></button>
+          <button class="ghost" id="btnExport" data-i18n="btnExport"></button>
+        </div>
+        <p class="status" id="pipeStatus"></p>
+      </div>
+
+      <div class="panel results-shell">
+        <div class="metrics" id="pipeMetrics" hidden>
+          <div class="metric"><span class="metric-label" data-i18n="metricScore"></span><strong id="mScore">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="metricTheme"></span><strong id="mTheme">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="metricBank"></span><strong id="mBank">—</strong></div>
+          <div class="metric"><span class="metric-label" data-i18n="metricJob"></span><strong id="mJob">—</strong></div>
+        </div>
+        <div class="result-tabs" id="resultTabs" hidden>
+          <button type="button" class="result-tab active" data-rtab="summary" data-i18n="tabSummary"></button>
+          <button type="button" class="result-tab" data-rtab="resume" data-i18n="tabResume"></button>
+          <button type="button" class="result-tab" data-rtab="session" data-i18n="tabSession"></button>
+          <button type="button" class="result-tab" data-rtab="report" data-i18n="tabReport"></button>
+          <a class="btn ghost result-graph" id="pipeGraph" href="/timeline" target="_blank" data-i18n="openGraph"></a>
+        </div>
+        <div class="result-pane active" id="rtab-summary">
+          <p class="idle-hint" id="resultIdle" data-i18n="resultIdle"></p>
+          <article class="prose" id="pipeSummary" hidden></article>
+        </div>
+        <div class="result-pane" id="rtab-resume"><article class="prose" id="pipeResume"></article></div>
+        <div class="result-pane" id="rtab-session"><article class="prose" id="pipeSession"></article></div>
+        <div class="result-pane" id="rtab-report"><article class="prose" id="pipeReport"></article></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-interview">
+      <div class="panel">
+        <h2 data-i18n="ivTitle"></h2>
+        <p class="desc" data-i18n="ivDesc"></p>
+        <div class="row">
+          <select id="job" style="max-width:360px"></select>
+          <button class="primary" id="btnStart" data-i18n="btnStart"></button>
+          <button class="ghost" id="btnSpeak" data-i18n="btnSpeak"></button>
+          <button class="ghost" id="btnMic" data-i18n="btnMic"></button>
+          <span class="status" id="ivStatus" data-i18n="ivIdle"></span>
+        </div>
+      </div>
+      <div class="panel row tab-row">
+        <button class="ghost active" data-tab="chat" data-i18n="tabChat"></button>
+        <button class="ghost" data-tab="code" data-i18n="tabCode"></button>
+      </div>
+      <div id="tab-chat">
+        <div class="panel chat-shell"><div id="log"></div></div>
+        <div class="panel">
+          <textarea id="answer" data-i18n-placeholder="phAnswer" style="min-height:100px"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="primary" id="btnSend" data-i18n="btnSend"></button>
+          </div>
+        </div>
+      </div>
+      <div id="tab-code" style="display:none">
+        <div class="panel">
+          <p class="desc" data-i18n="codeHint"></p>
+          <div id="editor"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="primary" id="btnCode" data-i18n="btnCode"></button>
+          </div>
+          <pre class="status" id="codeFb"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-bank">
+      <div class="panel">
+        <h2 data-i18n="bankTitle"></h2>
+        <p class="desc" data-i18n="bankDesc"></p>
+        <div class="row">
+          <input type="text" id="bankQ" value="LLM Agent RAG" style="flex:1;min-width:200px"/>
+          <label class="check-label">
+            <input type="checkbox" id="bankSemantic"/>
+            <span data-i18n="bankSemantic"></span>
+          </label>
+          <button class="primary" id="btnBank" data-i18n="btnSearch"></button>
+        </div>
+        <div class="bank-list" id="bankOut"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-about">
+      <div class="panel">
+        <h2 data-i18n="aboutTitle"></h2>
+        <article class="prose" id="aboutBox" data-i18n="aboutLoading"></article>
+      </div>
+    </section>
   </div>
-</main>
-<script>
-const logEl = document.getElementById('log');
-const statusEl = document.getElementById('status');
-let ws = null, currentQ = '', monacoEditor = null;
-const synth = window.speechSynthesis;
-const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-function addLine(html, cls='') {
-  const d = document.createElement('div');
-  d.className = cls;
-  d.innerHTML = html;
-  logEl.appendChild(d);
-  logEl.scrollTop = logEl.scrollHeight;
-}
-
-async function loadJobs() {
-  const r = await fetch('/api/jobs');
-  const data = await r.json();
-  const sel = document.getElementById('job');
-  sel.innerHTML = '';
-  (data.jobs || []).forEach(j => {
-    const o = document.createElement('option');
-    o.value = j.job_id;
-    o.textContent = `${j.title || j.job_id} @ ${j.company || ''} (${j.score ?? ''})`;
-    sel.appendChild(o);
-  });
-  if (!sel.options.length) {
-    const o = document.createElement('option');
-    o.value = 'latest'; o.textContent = 'latest（请先跑 Studio 流水线）';
-    sel.appendChild(o);
-  }
-}
-
-function speak(text) {
-  if (!synth) return;
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-CN';
-  synth.speak(u);
-}
-
-function connect() {
-  const job = document.getElementById('job').value || 'latest';
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws/interview/${encodeURIComponent(job)}`);
-  statusEl.textContent = '连接中…';
-  ws.onopen = () => { statusEl.textContent = '已连接 · 实时'; };
-  ws.onclose = () => { statusEl.textContent = '已断开'; };
-  ws.onerror = () => { statusEl.textContent = '连接错误'; };
-  ws.onmessage = (ev) => {
-    const m = JSON.parse(ev.data);
-    if (m.type === 'question') {
-      currentQ = m.question;
-      addLine(`<strong>Q${m.turn}</strong> ${m.question}`, 'q');
-      speak(m.question);
-    } else if (m.type === 'gate') {
-      addLine(`门禁：${m.ok ? '通过' : '未通过'} — ${m.reason} <code>${(m.evidence_ids||[]).join(', ')}</code>`,
-        m.ok ? 'gate-ok' : 'gate-bad');
-    } else if (m.type === 'coding_feedback') {
-      document.getElementById('codeFb').textContent = (m.hints || []).join('\n');
-    } else if (m.type === 'error') {
-      addLine('错误：' + m.message, 'gate-bad');
-    }
-  };
-}
-
-document.getElementById('btnStart').onclick = () => { logEl.innerHTML=''; connect(); };
-document.getElementById('btnSpeak').onclick = () => speak(currentQ || '暂无题目');
-document.getElementById('btnSend').onclick = () => {
-  if (!ws || ws.readyState !== 1) return alert('请先开始面试');
-  const text = document.getElementById('answer').value.trim();
-  if (!text) return;
-  addLine(text, 'a');
-  ws.send(JSON.stringify({ type: 'answer', text }));
-  document.getElementById('answer').value = '';
-};
-document.getElementById('btnMic').onclick = () => {
-  if (!Rec) return alert('浏览器不支持 Web Speech ASR，请改用打字');
-  const r = new Rec();
-  r.lang = 'zh-CN';
-  r.onresult = (e) => {
-    document.getElementById('answer').value = e.results[0][0].transcript;
-  };
-  r.start();
-  statusEl.textContent = '正在听…';
-  r.onend = () => { statusEl.textContent = ws && ws.readyState===1 ? '已连接 · 实时' : '未连接'; };
-};
-
-document.querySelectorAll('.tabs button').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    document.getElementById('tab-chat').style.display = tab === 'chat' ? '' : 'none';
-    document.getElementById('tab-code').style.display = tab === 'code' ? '' : 'none';
-    if (tab === 'code' && !monacoEditor) {
-      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }});
-      require(['vs/editor/editor.main'], function () {
-        monacoEditor = monaco.editor.create(document.getElementById('editor'), {
-          value: 'def solve(nums):\n    # TODO\n    return nums\n',
-          language: 'python',
-          theme: 'vs',
-          minimap: { enabled: false },
-        });
-      });
-    }
-  };
-});
-
-document.getElementById('btnCode').onclick = () => {
-  if (!ws || ws.readyState !== 1) return alert('请先开始面试');
-  const code = monacoEditor ? monacoEditor.getValue() : '';
-  ws.send(JSON.stringify({ type: 'coding_submit', code }));
-};
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
-}
-loadJobs();
-</script>
+</div>
+<div class="toast" id="toast"></div>
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
 </body>
 </html>

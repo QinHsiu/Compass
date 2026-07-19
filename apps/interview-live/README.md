@@ -1,13 +1,19 @@
-# Interview Live
+# Compass Web
 
-Realtime interview over WebSocket + browser Web Speech (ASR/TTS) + Monaco coding tab + PWA.
+Primary UI: **FastAPI + WebSocket** full workbench (replaces Gradio as default).
 
 ```bash
-pip install -r requirements.txt
-pip install -e ../../packages/compass-core
-set COMPASS_ROOT=..\..\content
-python main.py
-# http://127.0.0.1:8766
+python -m compass_core.cli web --root content --port 8766
+# → http://127.0.0.1:8766/
 ```
 
-Or: `python -m compass_core.cli live --root content --port 8766`
+## Channels
+
+| Path | Role |
+|:-----|:-----|
+| `/ws/app` | ingest / pipeline / demo / bank / export |
+| `/ws/interview/{job_id}` | realtime Q&A + coding check |
+| `/api/ingest` | multipart file upload |
+| `/timeline` | evidence graph |
+
+Gradio Studio remains optional: `python -m compass_core.cli studio` or `docker compose --profile gradio up`.

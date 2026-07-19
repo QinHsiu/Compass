@@ -16,11 +16,11 @@ if [[ "${COMPASS_DEMO:-0}" == "1" ]]; then
     && cp /opt/compass/example_profile.json "$COMPASS_ROOT/profile/example_profile.json" || true
 fi
 
-case "${1:-studio}" in
-  studio)
+case "${1:-live}" in
+  studio|gradio)
     exec python /app/apps/studio/app.py
     ;;
-  live)
+  live|web)
     cd /app/apps/interview-live
     exec python -m uvicorn main:app --host 0.0.0.0 --port "${COMPASS_LIVE_PORT:-8766}"
     ;;

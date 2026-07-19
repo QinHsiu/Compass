@@ -80,30 +80,100 @@ def ui_ingest_resume(file_obj, paste_text: str):
     return f"已写入 {n} 条证据草稿 → {root/'evidence'}", "\n".join(warnings) or "OK", preview
 
 
+def _fixture_jd_path(root: Path) -> Path | None:
+    for p in (
+        root / "fixtures" / "demo" / "jd.txt",
+        Path(__file__).resolve().parents[2] / "content" / "fixtures" / "demo" / "jd.txt",
+    ):
+        if p.is_file():
+            return p
+    return None
+
+
+def _ensure_demo_evidence(root: Path) -> None:
+    """Seed fixture evidence when Demo mode has empty evidence dir."""
+    ev = root / "evidence"
+    ev.mkdir(parents=True, exist_ok=True)
+    if any(ev.glob("ev_*.md")):
+        return
+    for base in (
+        root / "fixtures" / "demo" / "evidence",
+        Path(__file__).resolve().parents[2] / "content" / "fixtures" / "demo" / "evidence",
+    ):
+        if base.is_dir():
+            for src in base.glob("*.md"):
+                dst = ev / src.name
+                if not dst.is_file():
+                    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            build_index(root)
+            return
+
+
 def ui_run_pipeline(jd_text: str, theme: str):
     root = _root()
     if not (jd_text or "").strip():
-        return "请粘贴岗位 JD", "", "", "", ""
+        return "请粘贴岗位 JD", "", "", "", "", ""
     m = match_and_save(root, jd_text.strip())
     r = apply_and_save(root, m.job_id, theme=theme or None)
     i = interview_and_save(root, m.job_id)
-    d = diagnose_and_save(root, m.job_id)
+    diagnose_and_save(root, m.job_id)
     upsert(root, m.job_id, "wishlist", note="studio pipeline")
     import re
+
+    from compass_core.export_report import export_report
 
     resume_md = (root / "resumes" / m.job_id / "resume.md").read_text(encoding="utf-8")
     session = (root / "interviews" / m.job_id / "session.md").read_text(encoding="utf-8")
     report = (root / "diagnoses" / m.job_id / "report.md").read_text(encoding="utf-8")
-    # Highlight evidence_id cites for quick scan
     resume_md = re.sub(r"(ev_[a-zA-Z0-9_]+)", r"**[`\1`]**", resume_md)
     session = re.sub(r"(ev_[a-zA-Z0-9_]+)", r"**[`\1`]**", session)
+    live = os.environ.get("COMPASS_LIVE_URL", "http://127.0.0.1:8766").rstrip("/")
+    graph_url = f"{live}/timeline?job_id={m.job_id}"
+    exp = export_report(root, m.job_id, want_pdf=False)
     summary = (
         f"匹配分 {m.score} · 主题 {r.get('theme')} · 题库命中 {i.get('bank_n')} · "
-        f"job_id `{m.job_id}` · "
-        f"[打开 HTML 简历](file://{(root / 'resumes' / m.job_id / 'resume.html').as_posix()})"
+        f"job_id `{m.job_id}`\n"
+        f"证据图谱: {graph_url}\n"
+        f"面评 HTML: {exp.get('html')}"
     )
     html_path = root / "resumes" / m.job_id / "resume.html"
-    return summary, resume_md, session, report, str(html_path) if html_path.is_file() else ""
+    return (
+        summary,
+        resume_md,
+        session,
+        report,
+        str(html_path) if html_path.is_file() else "",
+        graph_url,
+    )
+
+
+def ui_demo_pipeline(theme: str):
+    """One-click fixtures pipeline for COMPASS_DEMO / HF Space."""
+    root = _root()
+    _ensure_demo_evidence(root)
+    jd_path = _fixture_jd_path(root)
+    if not jd_path:
+        return "未找到 fixtures/demo/jd.txt", "", "", "", "", ""
+    return ui_run_pipeline(jd_path.read_text(encoding="utf-8"), theme)
+
+
+def ui_export_report(job_id: str):
+    root = _root()
+    jid = (job_id or "").strip()
+    if not jid:
+        jobs = sorted((root / "jobs").glob("*/match.json"))
+        if not jobs:
+            return "无岗位，请先跑流水线", ""
+        jid = jobs[-1].parent.name
+    from compass_core.export_report import export_report
+
+    out = export_report(root, jid, want_pdf=True)
+    msg = f"HTML → {out.get('html')}"
+    if out.get("pdf"):
+        msg += f"\nPDF → {out['pdf']}"
+    if out.get("warning"):
+        msg += f"\n{out['warning']}"
+    return msg, out.get("html") or ""
 
 
 def ui_search_bank(query: str, limit: int, semantic: bool = False):
@@ -311,6 +381,23 @@ footer { display: none !important; }
   .cm-hero { padding: 28px 22px; }
   .cm-hero h1 { font-size: 1.7rem; }
 }
+@media (max-width: 520px) {
+  .gradio-container { max-width: 100% !important; padding: 0 8px !important; }
+  .cm-top { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .cm-hero { padding: 20px 14px; margin: 10px 0 14px; border-radius: 14px; }
+  .cm-hero h1 { font-size: 1.35rem; }
+  .cm-hero .sub { font-size: 0.92rem; margin-bottom: 12px; }
+  .cm-feats { grid-template-columns: 1fr; }
+  .cm-templates { grid-template-columns: 1fr 1fr; }
+  .tab-nav {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-nav button { flex: 0 0 auto !important; white-space: nowrap !important; }
+  button.primary, .cm-panel button { width: 100% !important; }
+  .cm-cta-row { flex-direction: column; }
+}
 .cm-feat {
   background: rgba(255,255,255,0.78);
   border: 1px solid #dde7f8;
@@ -473,20 +560,31 @@ def build_app() -> gr.Blocks:
                         value="tech_single",
                         label="简历主题",
                     )
-                    btn_pipe = gr.Button("一键生成求职方案", variant="primary")
-                    summary = gr.Textbox(label="结果摘要", lines=2)
+                    with gr.Row():
+                        btn_pipe = gr.Button("一键生成求职方案", variant="primary")
+                        if os.environ.get("COMPASS_DEMO", "").strip() in ("1", "true", "yes"):
+                            btn_demo = gr.Button("一键 Demo 流水线（fixtures）")
+                        else:
+                            btn_demo = None
+                    summary = gr.Textbox(label="结果摘要", lines=4)
+                    graph_link = gr.Textbox(label="证据图谱 URL（Interview Live）", lines=1)
                     with gr.Accordion("简历稿", open=True):
                         resume_out = gr.Markdown()
                     with gr.Accordion("面试题包", open=False):
                         session_out = gr.Markdown()
                     with gr.Accordion("缺口诊断", open=False):
                         report_out = gr.Markdown()
+                        with gr.Row():
+                            export_job = gr.Textbox(label="导出用岗位 ID（空=最近）", lines=1)
+                            btn_export = gr.Button("导出面评 HTML/PDF")
+                        export_msg = gr.Textbox(label="导出结果", lines=3)
+                        export_path = gr.Textbox(label="面评 HTML 路径", lines=1)
                     html_path = gr.Textbox(label="HTML 简历路径（可浏览器打开）")
-                    btn_pipe.click(
-                        ui_run_pipeline,
-                        [jd, theme],
-                        [summary, resume_out, session_out, report_out, html_path],
-                    )
+                    pipe_outs = [summary, resume_out, session_out, report_out, html_path, graph_link]
+                    btn_pipe.click(ui_run_pipeline, [jd, theme], pipe_outs)
+                    if btn_demo is not None:
+                        btn_demo.click(ui_demo_pipeline, [theme], pipe_outs)
+                    btn_export.click(ui_export_report, [export_job], [export_msg, export_path])
 
             with gr.Tab("模拟面试"):
                 with gr.Column(elem_classes=["cm-panel"]):
@@ -586,8 +684,8 @@ def build_app() -> gr.Blocks:
 | English | Turn real experience into matchable, interview-ready evidence |
 | 日本語 | 実体験を応募・面接に耐える証拠へ |
 
-CLI：`studio` · `live` · `rag-index` · `timeline`  
-Docker：`docker compose up`  
+CLI：`studio` · `live` · `rag-index` · `timeline` · `export-report`  
+Docker：`docker compose up`（`COMPASS_DEMO=1` 一键 Demo）  
 Skill：`/discover` → `/resume` → `/interview` → `/diagnose`
                         """
                     )

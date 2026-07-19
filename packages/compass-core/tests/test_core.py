@@ -102,8 +102,23 @@ def test_interview_cites_evidence(root: Path):
     session = (root / "interviews" / m.job_id / "session.md").read_text(encoding="utf-8")
     assert "evidence_id" in session or "ev_" in session
     assert out["bank_n"] >= 1
-    assert "Retrieved bank questions" in session
+    assert "检索到的题库题目" in session or "Retrieved bank questions" in session
     assert (root / "interviews" / m.job_id / "bank_hits.json").is_file()
+    hits = json.loads((root / "interviews" / m.job_id / "bank_hits.json").read_text(encoding="utf-8"))
+    if hits:
+        assert hits[0].get("q_zh") or hits[0].get("q_display")
+
+
+def test_bank_bilingual():
+    from compass_core.questions import enrich_hit, format_bank_section, search_questions
+
+    hits = search_questions("RAG agent memory", keywords=["rag", "agent"], limit=3, lang="zh")
+    assert hits
+    h = enrich_hit(hits[0], lang="zh")
+    assert h.get("q_zh")
+    assert h.get("q_display")
+    section = format_bank_section(hits, lang="zh")
+    assert "英文" in section or h["q_zh"] in section
 
 
 def test_templates_and_json_resume(root: Path):
@@ -195,8 +210,26 @@ def test_timeline_builder(root: Path):
     interview_and_save(root, m.job_id)
     data = build_timeline(root, job_id=m.job_id)
     assert data["summary"]["evidence"] >= 1
+    assert data["summary"]["links"] >= 1
     html = render_timeline_html(data)
-    assert "证据链" in html
+    assert "证据链图谱" in html
+    assert "<svg" in html
+    assert 'class="node"' in html
+
+
+def test_export_report(root: Path):
+    from compass_core.export_report import export_report
+
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    apply_and_save(root, m.job_id)
+    interview_and_save(root, m.job_id)
+    diagnose_and_save(root, m.job_id)
+    out = export_report(root, m.job_id, want_pdf=False)
+    assert Path(out["html"]).is_file()
+    body = Path(out["html"]).read_text(encoding="utf-8")
+    assert "四象限" in body
+    assert "证据引用" in body
 
 
 def test_rag_fallback(root: Path):

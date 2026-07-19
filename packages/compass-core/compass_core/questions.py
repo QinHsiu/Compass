@@ -1,13 +1,15 @@
-"""Searchable interview question bank with open-source attribution."""
+"""Searchable interview question bank with open-source attribution + i18n."""
 
 from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent / "assets" / "questions"
 BANK_PATH = ASSETS / "bank.jsonl"
+ZH_PATH = ASSETS / "i18n_zh.json"
 
 
 def _tokenize(text: str) -> set[str]:
@@ -32,6 +34,87 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
     return rows
 
 
+@lru_cache(maxsize=1)
+def _zh_map() -> dict[str, str]:
+    if ZH_PATH.is_file():
+        return json.loads(ZH_PATH.read_text(encoding="utf-8"))
+    return {}
+
+
+def is_mostly_english(text: str) -> bool:
+    s = (text or "").strip()
+    if not s or s.startswith("<"):
+        return False
+    letters = re.findall(r"[A-Za-z]", s)
+    cjk = re.findall(r"[\u4e00-\u9fff]", s)
+    if not letters:
+        return False
+    return len(letters) >= max(8, len(cjk) * 2)
+
+
+def chinese_for(hit: dict) -> str:
+    """Return Chinese description for a bank hit (prefer curated map)."""
+    if hit.get("q_zh"):
+        return str(hit["q_zh"])
+    qid = hit.get("id") or ""
+    mapped = _zh_map().get(qid)
+    if mapped:
+        return mapped
+    q = hit.get("q") or ""
+    if not is_mostly_english(q):
+        return q
+    # light heuristic fallback
+    rules = [
+        ("Explain the difference between ", "请解释二者区别："),
+        ("Explain ", "请解释："),
+        ("How do you ", "你如何"),
+        ("How does ", "如何理解："),
+        ("How would you ", "你会如何"),
+        ("What is the difference between ", "有何区别："),
+        ("What is ", "什么是"),
+        ("What are ", "什么是"),
+        ("Describe ", "请描述："),
+        ("Design ", "请设计："),
+        ("Compare ", "请比较："),
+        ("Tell me about ", "请讲述："),
+        ("Difference between ", "区别是什么："),
+    ]
+    out = q
+    for a, b in rules:
+        if out.startswith(a):
+            out = b + out[len(a) :]
+            break
+    return "（译文）" + out.replace("?", "？")
+
+
+def enrich_hit(hit: dict, lang: str = "zh") -> dict:
+    """
+    Attach bilingual fields.
+    - q: original
+    - q_zh: Chinese description (always filled for English stems)
+    - q_display: preferred line for UI language
+    - q_secondary: companion line (EN↔ZH)
+    """
+    row = dict(hit)
+    q = row.get("q") or ""
+    zh = chinese_for(row)
+    row["q_zh"] = zh
+    row["q_en"] = q if is_mostly_english(q) else row.get("q_en") or q
+    lang = (lang or "zh").lower()
+    if lang.startswith("zh"):
+        row["q_display"] = zh if zh else q
+        row["q_secondary"] = q if is_mostly_english(q) and zh != q else ""
+    else:
+        # en / ja / es: keep original primary; if English, still attach Chinese note
+        row["q_display"] = q
+        row["q_secondary"] = zh if is_mostly_english(q) and zh and zh != q else ""
+    return row
+
+
+def enrich_hits(hits: list[dict], lang: str = "zh") -> list[dict]:
+    return [enrich_hit(h, lang=lang) for h in hits]
+
+
 def search_questions(
     query: str,
     *,
@@ -40,8 +123,9 @@ def search_questions(
     limit: int = 12,
     bank: list[dict] | None = None,
     extra_root: Path | None = None,
+    lang: str = "zh",
 ) -> list[dict]:
-    """Token overlap retrieval; returns questions with score + source fields."""
+    """Token overlap retrieval; returns questions with score + bilingual fields."""
     items = bank if bank is not None else load_bank(extra_root)
     q_tokens = _tokenize(query)
     for kw in keywords or []:
@@ -53,6 +137,7 @@ def search_questions(
         text = " ".join(
             [
                 it.get("q") or "",
+                it.get("q_zh") or "",
                 it.get("topic") or "",
                 " ".join(it.get("tags") or []),
             ]
@@ -70,7 +155,7 @@ def search_questions(
     scored.sort(key=lambda x: x[0], reverse=True)
     out = []
     for sc, it in scored[:limit]:
-        row = dict(it)
+        row = enrich_hit(it, lang=lang)
         row["score"] = sc
         out.append(row)
     return out
@@ -99,15 +184,50 @@ def infer_topics(keywords: list[str]) -> list[str]:
     return topics
 
 
-def format_bank_section(hits: list[dict]) -> str:
+_SECTION_TITLE = {
+    "zh": "### 检索到的题库题目",
+    "en": "### Retrieved bank questions",
+    "ja": "### 検索された問題集",
+    "es": "### Preguntas del banco",
+}
+
+_EMPTY = {
+    "zh": "_暂无题库命中 — 请以岗位深挖题为主。_\n",
+    "en": "_No bank hits — rely on job deep-dive questions._\n",
+    "ja": "_問題集ヒットなし — 求人深掘り問題を中心に。_\n",
+    "es": "_Sin aciertos — usa las preguntas del puesto._\n",
+}
+
+
+def format_bank_section(hits: list[dict], lang: str = "zh") -> str:
+    lang = (lang or "zh").lower()[:2]
     if not hits:
-        return "_No bank hits — rely on JD deep-dive questions._\n"
+        return _EMPTY.get(lang, _EMPTY["en"])
     lines = []
-    for i, h in enumerate(hits, 1):
+    for i, h in enumerate(enrich_hits(hits, lang=lang), 1):
         src = h.get("source") or "unknown"
         url = h.get("source_url") or ""
-        cite = f" — source: {src}" + (f" ({url})" if url else "")
-        lines.append(
-            f"{i}. **[{h.get('id')}]** ({h.get('topic')}/{h.get('difficulty')}) {h.get('q')}{cite}"
+        cite = f" — {src}" + (f" ({url})" if url else "")
+        primary = h.get("q_display") or h.get("q") or ""
+        secondary = h.get("q_secondary") or ""
+        head = (
+            f"{i}. **[{h.get('id')}]** ({h.get('topic')}/{h.get('difficulty')}) "
+            f"{primary}{cite}"
         )
+        lines.append(head)
+        if secondary:
+            label = {
+                "zh": "原文",
+                "en": "中文",
+                "ja": "中国語",
+                "es": "中文",
+            }.get(lang, "中文")
+            # When UI is zh, secondary is English original; otherwise secondary is Chinese.
+            if lang == "zh":
+                label = "英文"
+            lines.append(f"   - *{label}*: {secondary}")
     return "\n".join(lines) + "\n"
+
+
+def bank_section_title(lang: str = "zh") -> str:
+    return _SECTION_TITLE.get((lang or "zh")[:2], _SECTION_TITLE["en"])

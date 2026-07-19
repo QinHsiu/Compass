@@ -1,0 +1,30 @@
+name: Good first issue
+description: Small contribution suitable for newcomers
+labels: ["good first issue"]
+body:
+  - type: dropdown
+    id: tag
+    attributes:
+      label: Suggested label
+      options:
+        - bank
+        - docs
+        - ui
+        - core
+        - i18n
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: What should be done? Link to docs/GOOD_FIRST_ISSUES.md if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      placeholder: e.g. pytest passes; no personal content committed
+    validations:
+      required: true

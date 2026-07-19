@@ -1,12 +1,12 @@
 {
-  "name": "Compass Interview Live",
-  "short_name": "CompassLive",
+  "name": "Compass Web",
+  "short_name": "Compass",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f8fc",
+  "background_color": "#eef2f8",
   "theme_color": "#2b6de5",
   "lang": "zh-CN",
-  "description": "Evidence-driven realtime interview — local-first Compass",
+  "description": "Evidence-driven job compass — WebSocket workbench",
   "icons": [
     {
       "src": "/static/icon.svg",

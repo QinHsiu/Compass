@@ -62,12 +62,14 @@ def index_questions(root: Path) -> dict:
     return {"ok": True, "count": len(ids), "backend": "chromadb", "path": str(_rag_dir(root) / "chroma")}
 
 
-def semantic_search(root: Path, query: str, k: int = 8) -> list[dict]:
+def semantic_search(root: Path, query: str, k: int = 8, lang: str = "zh") -> list[dict]:
     """Semantic search; falls back to token search_questions."""
+    from .questions import enrich_hits
+
     try:
         import chromadb
     except ImportError:
-        return search_questions(query, limit=k, extra_root=root)
+        return search_questions(query, limit=k, extra_root=root, lang=lang)
 
     path = _rag_dir(root) / "chroma"
     if not path.exists():
@@ -90,4 +92,4 @@ def semantic_search(root: Path, query: str, k: int = 8) -> list[dict]:
         base["score"] = float(1.0 / (1.0 + (dists[i] if i < len(dists) else 1.0)))
         base["semantic"] = True
         out.append(base)
-    return out
+    return enrich_hits(out, lang=lang)

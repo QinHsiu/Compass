@@ -7,8 +7,9 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.3.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
-[![studio](https://img.shields.io/badge/UI-Gradio%20Studio-0F766E?style=for-the-badge&labelColor=1A2332)](apps/studio)
+[![version](https://img.shields.io/badge/version-0.5.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
+[![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
 
 <br/>
@@ -23,7 +24,7 @@
 
 <br/>
 
-`Gradio Studio` · `Cursor Skill` · `CLI` · `MCP` · Local-First
+`Compass Web (WebSocket)` · `Cursor Skill` · `CLI` · `MCP` · Local-First
 
 <br/>
 
@@ -47,35 +48,41 @@ pip install -e "packages/compass-core[dev,studio,live,rag]"
 pip install -r apps/studio/requirements.txt
 pip install -r apps/interview-live/requirements.txt
 
-# Docker（推荐试用）
+# Docker（推荐 · WebSocket 主界面）
 docker compose up --build
-# Studio http://127.0.0.1:7860 · Live http://127.0.0.1:8766
+# → http://127.0.0.1:8766/  宽屏 Web 工作台
+# 可选 Gradio：docker compose --profile gradio up
 
-# 本地
-python -m compass_core.cli crawl-llm --root content
+# 本地（主界面）
+python -m compass_core.cli web --root content --port 8766
+python -m compass_core.cli export-report --root content
+# 可选旧版 Gradio
 python -m compass_core.cli studio --root content --port 7860
-python -m compass_core.cli live --root content --port 8766
 ```
 
-HF Space 卡片说明见 [README_SPACE.md](README_SPACE.md)（Demo 仅 fixtures）。
+HF Space：[README_SPACE.md](README_SPACE.md)（仅 fixtures）· 传播文：[docs/launch_article_zh.md](docs/launch_article_zh.md) · [Good First Issues](docs/GOOD_FIRST_ISSUES.md)
 
 Unix: `./install.sh` then the same `crawl-llm` / `studio` commands.
 
 ---
 
-## Compass Studio
+## Compass Web（主界面）
 
-实时交互工作台（Gradio）：
+宽屏 WebSocket 工作台（`apps/interview-live`）：
 
-| Tab | 做什么 |
-|:----|:-------|
-| Resume | 上传 PDF / 图片 / 文本 → 证据草稿 |
-| Job + Pipeline | 粘贴 JD → 匹配 · 主题简历 · 面试包 · 缺口罗盘 |
-| Interview | **打字** 或 **口语**（TTS 读题 + 录音 ASR） |
-| Bank | 检索题库 · 一键刷新 LLM/Agent 爬取 |
-| About | 多语言说明 |
+| 区 | 做什么 |
+|:---|:-------|
+| 上传简历 | PDF / 图片 / 文本 → 证据草稿 |
+| 求职流水线 | JD → 匹配 · 主题简历 · 面试包 · 诊断 · 图谱 |
+| 实时面试 | WebSocket 追问 + Web Speech + Monaco |
+| 题库 | Token / 语义 RAG |
+| 证据图谱 | `/timeline` |
 
-口语依赖：`edge-tts`（TTS，默认）；`faster-whisper`（ASR，可选）。无 ASR 时可纯文本作答。
+```bash
+python -m compass_core.cli web --root content --port 8766
+```
+
+Gradio Studio 仍可用（可选）：`compass studio`。
 
 ---
 

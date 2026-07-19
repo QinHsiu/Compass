@@ -2,20 +2,19 @@
 
 ## Goal
 
-证据驱动闭环 + 实时面试追问 + 可部署 Demo；不堆企业端/监考。
+证据驱动闭环 + 实时面试 + 可部署 Demo + 证据图谱与社区冷启动；不堆企业端/监考/微调。
 
 ## Loop
 
 | Round | Gap | Fix | Done |
 |:------|:----|:----|:-----|
-| R1–R6 | Studio / ingest / bank / voice / README | v0.3 | ✅ |
-| A1 | Docker / Demo | Dockerfile + compose + HF card | ✅ |
-| A2 | Multi-LLM | `compass_core.llm` | ✅ |
-| A3 | Realtime interview | `apps/interview-live` WebSocket | ✅ |
-| A4 | Adaptive follow-up | `next_followup` | ✅ |
-| B1 | RAG | Chroma `rag-index` / `--semantic` | ✅ |
-| B2 | Docs / community | COMPETITIVE + CONTRIBUTING + launch.md | ✅ |
-| C | Timeline / Monaco / PWA | Live UI | ✅ |
+| A–C | Docker / LLM / Live / RAG / followup / Monaco / PWA | v0.4 | ✅ |
+| D1 | Evidence graph | SVG timeline HTML | ✅ |
+| D2 | Demo one-click | `COMPASS_DEMO` fixtures pipeline | ✅ |
+| D3 | Community pack | launch article + GOOD_FIRST_ISSUES | ✅ |
+| E1 | Mobile / PWA | Studio CSS + Live SW cache | ✅ |
+| E2 | Report export | `export-report` HTML/PDF | ✅ |
+| E3 | Contrib | Issue templates + COMPETITIVE 0.5 | ✅ |
 
 ## Commands
 
@@ -23,7 +22,7 @@
 docker compose up
 python -m compass_core.cli studio --root content
 python -m compass_core.cli live --root content
-python -m compass_core.cli rag-index --root content
-python -m compass_core.cli questions --semantic --query "rag agent memory"
 python -m compass_core.cli timeline --root content --html content/timeline.html
+python -m compass_core.cli export-report --root content
+python -m compass_core.cli rag-index --root content
 ```

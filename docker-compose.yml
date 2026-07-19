@@ -1,25 +1,5 @@
 services:
-  studio:
-    build: .
-    command: ["studio"]
-    ports:
-      - "7860:7860"
-    environment:
-      COMPASS_ROOT: /app/content
-      COMPASS_DEMO: "1"
-      COMPASS_HOST: "0.0.0.0"
-      COMPASS_PORT: "7860"
-      COMPASS_LIVE_URL: http://localhost:8766
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      COMPASS_MODEL: ${COMPASS_MODEL:-}
-      COMPASS_LLM_PROVIDER: ${COMPASS_LLM_PROVIDER:-openai}
-    volumes:
-      - compass_content:/app/content
-    depends_on:
-      - interview-live
-
-  interview-live:
+  web:
     build: .
     command: ["live"]
     ports:
@@ -35,6 +15,28 @@ services:
       COMPASS_LLM_PROVIDER: ${COMPASS_LLM_PROVIDER:-openai}
     volumes:
       - compass_content:/app/content
+
+  # Optional Gradio UI (legacy)
+  studio:
+    build: .
+    command: ["studio"]
+    profiles: ["gradio"]
+    ports:
+      - "7860:7860"
+    environment:
+      COMPASS_ROOT: /app/content
+      COMPASS_DEMO: "1"
+      COMPASS_HOST: "0.0.0.0"
+      COMPASS_PORT: "7860"
+      COMPASS_LIVE_URL: http://localhost:8766
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      COMPASS_MODEL: ${COMPASS_MODEL:-}
+      COMPASS_LLM_PROVIDER: ${COMPASS_LLM_PROVIDER:-openai}
+    volumes:
+      - compass_content:/app/content
+    depends_on:
+      - web
 
 volumes:
   compass_content:

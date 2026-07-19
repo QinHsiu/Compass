@@ -124,10 +124,11 @@ def cmd_questions(args) -> int:
     kws = [k.strip() for k in (args.keywords or "").split(",") if k.strip()]
     topics = infer_topics(kws) if kws else None
     query = args.query or " ".join(kws)
+    lang = getattr(args, "lang", None) or "zh"
     if getattr(args, "semantic", False):
         from .rag import semantic_search
 
-        hits = semantic_search(root, query, k=args.limit)
+        hits = semantic_search(root, query, k=args.limit, lang=lang)
         backend = "semantic"
     else:
         hits = search_questions(
@@ -136,6 +137,7 @@ def cmd_questions(args) -> int:
             topics=topics,
             limit=args.limit,
             extra_root=root,
+            lang=lang,
         )
         backend = "token"
     print(
@@ -169,13 +171,14 @@ def cmd_llm_info(args) -> int:
 
 
 def cmd_live(args) -> int:
+    """Launch Compass Web (WebSocket workbench) — primary UI."""
     import os
     import runpy
 
     repo = Path(__file__).resolve().parents[3]
     live = repo / "apps" / "interview-live" / "main.py"
     if not live.is_file():
-        print(f"interview-live not found at {live}", file=sys.stderr)
+        print(f"Compass Web not found at {live}", file=sys.stderr)
         return 1
     if getattr(args, "root", None):
         os.environ["COMPASS_ROOT"] = str(Path(args.root).resolve())
@@ -196,6 +199,22 @@ def cmd_timeline(args) -> int:
         print(json.dumps({"path": str(out), "summary": data["summary"]}, ensure_ascii=False, indent=2))
     else:
         print(json.dumps(data, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_export_report(args) -> int:
+    from .export_report import export_report
+
+    root = _root(args)
+    job_id = args.job_id
+    if not job_id:
+        jobs = sorted((root / "jobs").glob("*/match.json"))
+        if not jobs:
+            print("no jobs; pass --job-id", file=sys.stderr)
+            return 1
+        job_id = jobs[-1].parent.name
+    out = export_report(root, job_id, want_pdf=not args.html_only)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -354,6 +373,7 @@ def build_parser() -> argparse.ArgumentParser:
     qb.add_argument("--keywords", default="")
     qb.add_argument("--limit", type=int, default=12)
     qb.add_argument("--semantic", action="store_true", help="use Chroma RAG when available")
+    qb.add_argument("--lang", default="zh", help="ui language for bilingual bank hits (zh/en/ja/es)")
     qb.set_defaults(func=cmd_questions)
 
     rag = sub.add_parser("rag-index", parents=[parent], help="build local question vector index")
@@ -365,14 +385,22 @@ def build_parser() -> argparse.ArgumentParser:
     llm.add_argument("--base-url", default=None)
     llm.set_defaults(func=cmd_llm_info)
 
-    live = sub.add_parser("live", parents=[parent], help="launch Interview Live (WebSocket)")
+    live = sub.add_parser("live", parents=[parent], help="launch Compass Web (WebSocket UI)")
     live.add_argument("--port", type=int, default=8766)
     live.set_defaults(func=cmd_live)
+    web = sub.add_parser("web", parents=[parent], help="alias for live — primary WebSocket UI")
+    web.add_argument("--port", type=int, default=8766)
+    web.set_defaults(func=cmd_live)
 
-    tl = sub.add_parser("timeline", parents=[parent], help="evidence chain timeline JSON/HTML")
+    tl = sub.add_parser("timeline", parents=[parent], help="evidence chain graph JSON/HTML")
     tl.add_argument("--job-id", default=None)
-    tl.add_argument("--html", default=None, help="write HTML file path")
+    tl.add_argument("--html", default=None, help="write HTML graph file path")
     tl.set_defaults(func=cmd_timeline)
+
+    er = sub.add_parser("export-report", parents=[parent], help="export diagnose/interview HTML(+PDF)")
+    er.add_argument("--job-id", default=None)
+    er.add_argument("--html-only", action="store_true", help="skip PDF attempt")
+    er.set_defaults(func=cmd_export_report)
 
     i = sub.add_parser("interview-pack", parents=[parent], help="build interview pack + session")
     i.add_argument("--job-id", required=True)

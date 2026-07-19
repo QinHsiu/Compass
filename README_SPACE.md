@@ -12,15 +12,16 @@ license: mit
 
 # Compass — Evidence-Driven Job Compass (Demo)
 
-**Demo only uses anonymous fixtures** under `content/fixtures/demo`.  
-Do not upload real resumes to public Spaces.
+**Demo only.** Loads anonymous fixtures under `content/fixtures/demo`.
 
-Local / Docker:
+- Click **一键 Demo 流水线（fixtures）** on the「智能求职」tab (`COMPASS_DEMO=1`).
+- **Do not upload real resumes** to public Spaces.
+- **Interview Live** (WebSocket / 证据图谱) is not on HF — run locally:
 
 ```bash
-docker compose up
+docker compose up --build
 # Studio http://localhost:7860
-# Live  http://localhost:8766
+# Live  http://localhost:8766  → /timeline 证据图谱
 ```
 
-See main [README.md](README.md) and [docs/COMPLIANCE.md](docs/COMPLIANCE.md).
+See [README.md](README.md), [docs/COMPLIANCE.md](docs/COMPLIANCE.md), [docs/launch_article_zh.md](docs/launch_article_zh.md).

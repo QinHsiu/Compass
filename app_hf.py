@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parent
 os.environ.setdefault("COMPASS_DEMO", "1")
 os.environ.setdefault("COMPASS_ROOT", str(ROOT / "content"))
 os.environ.setdefault("COMPASS_PORT", "7860")
+os.environ.setdefault("COMPASS_HOST", "0.0.0.0")
 
 content = ROOT / "content"
 fixtures = content / "fixtures" / "demo" / "evidence"
