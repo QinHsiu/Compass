@@ -56,16 +56,32 @@ def build_report_payload(root: Path, job_id: str) -> dict:
 def _extract_quadrants(report_md: str) -> list[str]:
     found = []
     for name in ("Evidence", "Narrative", "Skill", "Process"):
-        if f"Quadrant: {name}" in report_md or f"象限" in report_md and name.lower() in report_md.lower():
+        if f"Quadrant: {name}" in report_md or name in report_md:
             found.append(name)
-        elif name in report_md:
-            found.append(name)
-    # keep unique order
     out = []
     for n in ("Evidence", "Narrative", "Skill", "Process"):
         if n in found and n not in out:
             out.append(n)
     return out or ["Evidence", "Narrative", "Skill", "Process"]
+
+
+def _quad_blurb(name: str, report_md: str) -> str:
+    """Pull a short snippet near the quadrant heading if present."""
+    patterns = [
+        rf"Quadrant:\s*{name}[^\n]*\n([\s\S]{{0,280}})",
+        rf"##[^\n]*{name}[^\n]*\n([\s\S]{{0,280}})",
+    ]
+    for p in patterns:
+        m = re.search(p, report_md or "", re.I)
+        if m:
+            return re.sub(r"\s+", " ", m.group(1)).strip()[:220]
+    labels = {
+        "Evidence": "证据是否可追溯、是否有 evidence_id",
+        "Narrative": "叙事是否清晰、是否能量化结果",
+        "Skill": "技能与岗位硬性要求的覆盖度",
+        "Process": "流程/准备动作是否可执行",
+    }
+    return labels.get(name, "")
 
 
 def render_report_html(payload: dict) -> str:
@@ -74,9 +90,20 @@ def render_report_html(payload: dict) -> str:
     job_id = html.escape(str(payload.get("job_id")))
     score = payload.get("score")
     eids = payload.get("evidence_ids") or []
-    eid_html = "".join(f"<li><code>{html.escape(e)}</code></li>" for e in eids) or "<li>（无）</li>"
-    quads = "".join(f"<span class='q'>{html.escape(q)}</span>" for q in (payload.get("quadrants") or []))
-    report = html.escape(payload.get("report_md") or "（无诊断报告）")
+    report_md = payload.get("report_md") or ""
+    eid_rows = "".join(
+        f"<tr><td><code>{html.escape(e)}</code></td><td>cited</td></tr>" for e in eids
+    ) or "<tr><td colspan='2'>（无）</td></tr>"
+
+    quad_cards = []
+    for qn in payload.get("quadrants") or []:
+        blurb = html.escape(_quad_blurb(qn, report_md))
+        quad_cards.append(
+            f"<div class='quad'><h3>{html.escape(qn)}</h3><p>{blurb}</p></div>"
+        )
+    quads_html = "".join(quad_cards)
+
+    report = html.escape(report_md or "（无诊断报告）")
     bridge = html.escape(payload.get("bridge_md") or "")
     oral_bits = []
     for i, row in enumerate(payload.get("oral_rows") or [], 1):
@@ -92,15 +119,27 @@ def render_report_html(payload: dict) -> str:
 body{{font-family:"Noto Sans SC",system-ui,sans-serif;background:#f5f8fc;color:#1c2434;margin:0;padding:24px;line-height:1.55}}
 h1{{color:#2b6de5;margin:0 0 8px}} .muted{{color:#6b7280}}
 .card{{background:#fff;border:1px solid #e6ebf2;border-radius:12px;padding:16px;margin:12px 0}}
-.q{{display:inline-block;background:#eef4ff;color:#2b6de5;padding:4px 10px;border-radius:999px;margin:0 6px 6px 0;font-size:.85rem}}
+.quads{{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:12px 0}}
+@media(max-width:640px){{.quads{{grid-template-columns:1fr}}}}
+.quad{{background:linear-gradient(180deg,#f7faff,#eef4ff);border:1px solid #d9e4f7;border-radius:14px;padding:14px}}
+.quad h3{{margin:0 0 8px;color:#2b6de5;font-size:1rem}}
+.quad p{{margin:0;font-size:.9rem;color:#334155}}
+table{{width:100%;border-collapse:collapse;font-size:.9rem}}
+th,td{{border:1px solid #e6ebf2;padding:8px 10px;text-align:left}}
+th{{background:#eef4ff}}
 pre{{white-space:pre-wrap;background:#fafcff;border:1px solid #e6ebf2;border-radius:8px;padding:12px;font-size:.9rem}}
 code{{background:#eef4ff;padding:1px 6px;border-radius:4px}}
-@media print{{body{{background:#fff;padding:0}} .card{{break-inside:avoid}}}}
+@media print{{body{{background:#fff;padding:0}} .card,.quad{{break-inside:avoid}}}}
 </style></head><body>
 <h1>面评 / 缺口报告</h1>
 <p class="muted">{title} @ {company} · job_id <code>{job_id}</code> · 匹配分 {html.escape(str(score))}</p>
-<div class="card"><strong>四象限</strong><br/>{quads or '<span class="muted">见正文</span>'}</div>
-<div class="card"><strong>证据引用</strong><ul>{eid_html}</ul></div>
+<div class="card">
+  <strong>四象限</strong>
+  <div class="quads" id="quadrant-cards">{quads_html}</div>
+</div>
+<div class="card"><strong>证据引用表</strong>
+<table><thead><tr><th>evidence_id</th><th>status</th></tr></thead><tbody>{eid_rows}</tbody></table>
+</div>
 <div class="card"><strong>诊断报告</strong><pre>{report}</pre></div>
 {f'<div class="card"><strong>Bridge 计划</strong><pre>{bridge}</pre></div>' if bridge else ''}
 <div class="card"><strong>口语回合摘要</strong><ul>{oral_html}</ul></div>
@@ -132,21 +171,28 @@ def export_report(root: Path, job_id: str, *, want_pdf: bool = True) -> dict:
             pdf = FPDF()
             pdf.add_page()
             pdf.set_auto_page_break(True, 12)
-            # Core fonts lack CJK; use transliteration-safe ASCII summary + note
             pdf.set_font("Helvetica", size=14)
-            pdf.multi_cell(0, 8, f"Compass Report: {payload.get('title')} @ {payload.get('company')}")
+            pdf.multi_cell(0, 8, "Compass Report (summary)")
             pdf.set_font("Helvetica", size=11)
+            pdf.multi_cell(0, 6, f"Role: {payload.get('title')} @ {payload.get('company')}")
             pdf.multi_cell(0, 6, f"job_id: {job_id}  score: {payload.get('score')}")
-            pdf.multi_cell(0, 6, "Quadrants: " + ", ".join(payload.get("quadrants") or []))
-            pdf.multi_cell(0, 6, "Evidence IDs: " + ", ".join(payload.get("evidence_ids") or [])[:500])
-            pdf.ln(4)
-            pdf.multi_cell(
-                0,
-                6,
-                "Full Chinese content is in report.html (PDF summary uses Latin-safe text).",
-            )
-            # Strip non-latin from report excerpt
-            excerpt = re.sub(r"[^\x00-\x7F]+", " ", payload.get("report_md") or "")[:1800]
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.multi_cell(0, 7, "1. Quadrants")
+            pdf.set_font("Helvetica", size=11)
+            for qn in payload.get("quadrants") or []:
+                pdf.multi_cell(0, 6, f"- {qn}")
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.multi_cell(0, 7, "2. Evidence IDs")
+            pdf.set_font("Helvetica", size=11)
+            pdf.multi_cell(0, 6, ", ".join(payload.get("evidence_ids") or [])[:800] or "(none)")
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.multi_cell(0, 7, "3. See HTML for full Chinese text")
+            pdf.set_font("Helvetica", size=10)
+            pdf.multi_cell(0, 5, str(html_path))
+            excerpt = re.sub(r"[^\x00-\x7F]+", " ", payload.get("report_md") or "")[:1200]
             pdf.multi_cell(0, 5, excerpt or "(see HTML)")
             pdf.output(str(pdf_path))
             result["pdf"] = str(pdf_path)

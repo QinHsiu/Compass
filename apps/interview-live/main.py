@@ -9,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -39,7 +39,7 @@ HERE = Path(__file__).resolve().parent
 STATIC = HERE / "static"
 REPO = HERE.parents[1]
 
-app = FastAPI(title="Compass Web", version="0.5.1")
+app = FastAPI(title="Compass Web", version="0.6.0")
 if STATIC.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
@@ -134,7 +134,7 @@ def index():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "root": str(_root()), "ui": "websocket-web", "version": "0.5.1"}
+    return {"ok": True, "root": str(_root()), "ui": "websocket-web", "version": "0.6.0"}
 
 
 @app.get("/api/meta")
@@ -193,6 +193,30 @@ def timeline(job_id: str | None = None):
 def timeline_page(job_id: str | None = None):
     data = build_timeline(_root(), job_id=job_id)
     return HTMLResponse(render_timeline_html(data))
+
+
+@app.post("/api/asr")
+async def api_asr(file: UploadFile = File(...), language: str = Form("zh")):
+    """Optional high-accuracy ASR via faster-whisper (extras [asr])."""
+    from compass_core.voice import transcribe_audio
+
+    suffix = Path(file.filename or "audio.webm").suffix or ".webm"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        path = tmp.name
+    try:
+        out = transcribe_audio(path, language=language or "zh")
+        ok = bool(out.get("text"))
+        return {
+            "ok": ok,
+            "text": out.get("text") or "",
+            "warning": out.get("warning") or "",
+        }
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
 
 
 @app.post("/api/ingest")

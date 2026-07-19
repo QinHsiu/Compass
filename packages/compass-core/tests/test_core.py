@@ -229,7 +229,31 @@ def test_export_report(root: Path):
     assert Path(out["html"]).is_file()
     body = Path(out["html"]).read_text(encoding="utf-8")
     assert "四象限" in body
+    assert "quadrant-cards" in body
     assert "证据引用" in body
+
+
+def test_timeline_interactive_html(root: Path):
+    from compass_core.timeline import build_timeline, render_timeline_html
+
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    apply_and_save(root, m.job_id)
+    interview_and_save(root, m.job_id)
+    html = render_timeline_html(build_timeline(root, job_id=m.job_id))
+    assert 'id="fEv"' in html
+    assert 'id="q"' in html
+    assert "节点详情" in html
+
+
+def test_rag_eval_fixtures(root: Path):
+    from compass_core.rag_eval import evaluate_queries, load_queries
+
+    qpath = FIXTURE / "rag_queries.jsonl"
+    assert qpath.is_file()
+    out = evaluate_queries(root, load_queries(qpath), k=3, semantic=False)
+    assert out["n"] >= 5
+    assert "hit_at_k" in out
 
 
 def test_rag_fallback(root: Path):

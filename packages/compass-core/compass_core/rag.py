@@ -92,4 +92,12 @@ def semantic_search(root: Path, query: str, k: int = 8, lang: str = "zh") -> lis
         base["score"] = float(1.0 / (1.0 + (dists[i] if i < len(dists) else 1.0)))
         base["semantic"] = True
         out.append(base)
-    return enrich_hits(out, lang=lang)
+    enriched = enrich_hits(out, lang=lang)
+    try:
+        from .rag_eval import log_query
+
+        if root and query:
+            log_query(root, query, [h.get("id") for h in enriched if h.get("id")], backend="chromadb")
+    except Exception:
+        pass
+    return enriched

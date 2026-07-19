@@ -1,0 +1,16 @@
+# Pinned ranges for reproducible Web installs (not a full pip-tools freeze).
+# Regenerate after major upgrades:
+#   pip install -e "packages/compass-core[live]"
+#   pip freeze | findstr /I "fastapi uvicorn websockets multipart beautifulsoup feedparser jsonpatch lxml"
+#
+# Core (from compass-core)
+beautifulsoup4>=4.12,<5
+feedparser>=6.0,<7
+jsonpatch>=1.33,<2
+lxml>=5.0,<6
+
+# Web
+fastapi>=0.110,<0.120
+uvicorn[standard]>=0.27,<0.35
+websockets>=12.0,<16
+python-multipart>=0.0.9,<0.1

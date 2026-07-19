@@ -124,6 +124,11 @@
         <div class="result-pane" id="rtab-session"><article class="prose" id="pipeSession"></article></div>
         <div class="result-pane" id="rtab-report"><article class="prose" id="pipeReport"></article></div>
       </div>
+      <div class="panel" id="graphEmbedPanel" hidden>
+        <h2 data-i18n="chipGraph">证据图谱</h2>
+        <p class="desc" data-i18n="graphEmbedDesc">流水线完成后可在此筛选、搜索节点。</p>
+        <iframe id="graphFrame" title="evidence graph" style="width:100%;min-height:560px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
+      </div>
     </section>
 
     <section class="view" id="view-interview">
@@ -135,8 +140,14 @@
           <button class="primary" id="btnStart" data-i18n="btnStart"></button>
           <button class="ghost" id="btnSpeak" data-i18n="btnSpeak"></button>
           <button class="ghost" id="btnMic" data-i18n="btnMic"></button>
+          <label class="check-label">
+            <input type="checkbox" id="useWhisper"/>
+            <span data-i18n="asrWhisper">高精度转写</span>
+          </label>
+          <button class="ghost" id="btnRec" data-i18n="btnRec">录音转写</button>
           <span class="status" id="ivStatus" data-i18n="ivIdle"></span>
         </div>
+        <p class="status" id="asrHint" data-i18n="asrHint"></p>
       </div>
       <div class="panel row tab-row">
         <button class="ghost active" data-tab="chat" data-i18n="tabChat"></button>

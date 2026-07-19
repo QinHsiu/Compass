@@ -1,20 +1,21 @@
 # Changelog
 
+## 0.6.0 — 2026-07-19
+
+- Config: `.env.example`, layered install docs, Docker **4GB+** guidance, `requirements-web.txt` / `requirements-lock.txt`
+- Evidence graph: type filters, search, detail pane, clickable edges; embed in Web pipeline results
+- ASR: `POST /api/asr` Whisper fallback (optional `[asr]`) + record button in Web interview
+- RAG: `compass rag-eval` + fixtures `rag_queries.jsonl` + optional `query_log.jsonl`
+- Export: HTML quadrant cards + evidence table; PDF sectioned summary
+- Community: expanded GOOD_FIRST_ISSUES, 3-minute demo script, `docs/assets/demo-pipeline.svg`
+
 ## 0.5.1 — 2026-07-19
 
-- **Primary UI**: Compass Web (WebSocket) replaces Gradio as default
-- `/ws/app` workbench: ingest, pipeline, demo, bank search, export
-- Wide sidebar layout; Docker `web` service on 8766; Gradio behind `--profile gradio`
-- CLI: `compass web` alias for `live`
+- Primary UI: Compass Web (WebSocket); bilingual bank questions; Gradio optional
 
 ## 0.5.0 — 2026-07-19
 
-- Evidence graph: layered SVG with click highlight (`timeline` HTML / Live `/timeline`)
-- Demo: `COMPASS_DEMO=1` one-click fixtures pipeline in Studio; HF Space notes
-- Report export: `compass export-report` → HTML (+ optional PDF via `fpdf2`)
-- Studio/Live mobile CSS; PWA SW caches static only (not `/api` `/ws` `/timeline`)
-- Community: `docs/launch_article_zh.md`, `docs/GOOD_FIRST_ISSUES.md`, GitHub issue templates
-- COMPETITIVE refresh: tech gaps closed; proctoring/enterprise/LoRA still out of scope
+- Evidence graph, demo pipeline, report export, i18n, community pack
 
 ## 0.4.0 — 2026-07-19
 

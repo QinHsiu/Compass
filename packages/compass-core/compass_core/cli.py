@@ -162,6 +162,29 @@ def cmd_rag_index(args) -> int:
     return 0
 
 
+def cmd_rag_eval(args) -> int:
+    from .rag_eval import evaluate_queries, load_queries
+
+    root = _root(args)
+    qpath = Path(args.query_file) if args.query_file else None
+    if not qpath or not qpath.is_file():
+        # prefer fixtures next to content root / repo fixtures
+        for cand in (
+            root / "fixtures" / "demo" / "rag_queries.jsonl",
+            Path(__file__).resolve().parents[3] / "content" / "fixtures" / "demo" / "rag_queries.jsonl",
+        ):
+            if cand.is_file():
+                qpath = cand
+                break
+    if not qpath or not qpath.is_file():
+        print("query file not found; pass --query-file", file=sys.stderr)
+        return 1
+    queries = load_queries(qpath)
+    out = evaluate_queries(root, queries, k=args.k, semantic=not args.token)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_llm_info(args) -> int:
     from .llm import describe_config, load_config
 
@@ -378,6 +401,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     rag = sub.add_parser("rag-index", parents=[parent], help="build local question vector index")
     rag.set_defaults(func=cmd_rag_index)
+
+    reval = sub.add_parser("rag-eval", parents=[parent], help="evaluate RAG hit@k on a query set")
+    reval.add_argument("--query-file", default=None, help="jsonl with query + expect_ids")
+    reval.add_argument("--k", type=int, default=3)
+    reval.add_argument("--token", action="store_true", help="use token search instead of semantic")
+    reval.set_defaults(func=cmd_rag_eval)
 
     llm = sub.add_parser("llm-info", parents=[parent], help="show LLM provider config")
     llm.add_argument("--provider", default=None)

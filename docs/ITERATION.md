@@ -2,27 +2,27 @@
 
 ## Goal
 
-证据驱动闭环 + 实时面试 + 可部署 Demo + 证据图谱与社区冷启动；不堆企业端/监考/微调。
+证据驱动闭环 + Web 主界面；降低配置门槛；图谱可交互；RAG/ASR 可观测；不堆监考/企业端。
 
 ## Loop
 
 | Round | Gap | Fix | Done |
 |:------|:----|:----|:-----|
-| A–C | Docker / LLM / Live / RAG / followup / Monaco / PWA | v0.4 | ✅ |
-| D1 | Evidence graph | SVG timeline HTML | ✅ |
-| D2 | Demo one-click | `COMPASS_DEMO` fixtures pipeline | ✅ |
-| D3 | Community pack | launch article + GOOD_FIRST_ISSUES | ✅ |
-| E1 | Mobile / PWA | Studio CSS + Live SW cache | ✅ |
-| E2 | Report export | `export-report` HTML/PDF | ✅ |
-| E3 | Contrib | Issue templates + COMPETITIVE 0.5 | ✅ |
+| A–E | Docker / Live / RAG / graph / export / i18n | v0.5 | ✅ |
+| F1 | Config barrier | `.env.example` + layered install + 4GB note | ✅ |
+| F2 | Graph interaction | filter / search / detail / embed | ✅ |
+| F3 | Community pack | GOOD_FIRST + 3-min script + demo asset | ✅ |
+| G1 | ASR accuracy | `/api/asr` + record button | ✅ |
+| G2 | RAG metrics | `rag-eval` + fixtures | ✅ |
+| G3/G4 | Lock + export | requirements-* + quadrant HTML | ✅ |
 
 ## Commands
 
 ```bash
-docker compose up
-python -m compass_core.cli studio --root content
-python -m compass_core.cli live --root content
-python -m compass_core.cli timeline --root content --html content/timeline.html
+cp .env.example .env
+docker compose up --build
+python -m compass_core.cli web --root content
+python -m compass_core.cli rag-eval --root content
 python -m compass_core.cli export-report --root content
-python -m compass_core.cli rag-index --root content
+python -m compass_core.cli timeline --root content --html content/timeline.html
 ```

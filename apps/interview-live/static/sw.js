@@ -1,4 +1,4 @@
-const CACHE = "compass-web-v5";
+const CACHE = "compass-web-v6";
 const ASSETS = [
   "/",
   "/static/manifest.webmanifest",

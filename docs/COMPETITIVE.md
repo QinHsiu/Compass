@@ -1,11 +1,11 @@
 # Competitive positioning / 竞品对照
 
-Source: [compass_r.txt](../../compass_r.txt) (2026-07 interview-sim wave, refreshed).
+Source: [compass_r.txt](../../compass_r.txt) (2026-07 eval refresh).
 
 ## Status
 
-Technical gaps from the previous wave (**Docker / multi-LLM / Live WS / RAG / adaptive follow-up**) are **closed**.  
-Current focus: **evidence graph UX**, **demo onboarding**, **report export**, **mobile polish**, **community cold-start**.
+Core loop and stack (Docker / multi-LLM / WebSocket Web / RAG / follow-up / evidence graph) are **in place**.  
+UX primary surface is **Compass Web**, not Gradio. v0.6 focuses on **config onboarding**, **interactive graph**, **ASR fallback**, **RAG measurability**, and **community cold-start**.
 
 ## Moat (keep)
 
@@ -13,40 +13,25 @@ Current focus: **evidence graph UX**, **demo onboarding**, **report export**, **
 |:---------------|:--------|
 | Evidence gate | Claims need `evidence_id` |
 | Gap compass 4Q | Evidence / Narrative / Skill / Process |
-| Multi-form | **Compass Web (WS)** + optional Gradio + Skill + CLI + MCP |
+| Multi-form | **Compass Web** + optional Gradio + Skill + CLI + MCP |
 | Local-first | Data under `content/` |
-| Evidence graph | SVG graph: evidence → resume → interview |
-
-## Capability snapshot
-
-| Capability | Compass | Notes vs peers |
-|:-----------|:-------:|:---------------|
-| Full loop upload→diagnose | **✅** | Longest chain |
-| Realtime voice | **✅ Live WS** | Not LiveKit; Web Speech first |
-| Adaptive follow-up | **✅** | LLM or rules |
-| RAG bank | **✅ Chroma** | Rare among peers |
-| Evidence graph | **✅** | Differentiator |
-| Report HTML/PDF | **✅** | `export-report` |
-| Docker / Demo | **✅** | compose + HF fixtures |
-| Community / Stars | building | launch article + good-first issues |
+| Evidence graph | Interactive filter / search / detail |
 
 ## Out of scope (intentional)
 
 | Item | Why |
 |:-----|:----|
-| Camera proctoring (MediaPipe) | Conflicts with local privacy positioning |
-| Enterprise recruiter SaaS | Dilutes job-seeker focus |
-| LoRA / industry fine-tune | Ops + compliance cost; BYOK + RAG enough |
-| LangGraph multi-agent rewrite | `next_followup` + rules suffice |
-| Full Gradio→React rewrite | Live covers realtime; cost too high |
-| 200+ career mini-tools | Sproutern-style sprawl |
+| Camera proctoring | Privacy / job-seeker positioning |
+| Enterprise recruiter SaaS | Dilutes focus |
+| LoRA fine-tune | Ops + compliance cost |
+| LangGraph rewrite | `next_followup` suffices |
+| Gradio as primary UX | Replaced by Web |
 
-## Acceptance (v0.5)
+## Acceptance (v0.6)
 
 | Metric | Target |
 |:-------|:-------|
-| Evidence graph | SVG + click highlight; ≥1 edge after fixture pipeline |
-| Demo | `COMPASS_DEMO=1` one-click fixtures pipeline |
-| Export | `compass export-report` → HTML (+ PDF if fpdf2) |
-| Mobile | 375px Studio/Live usable |
-| Community | launch article + GOOD_FIRST_ISSUES + issue templates |
+| `.env.example` + README memory | No-key Demo in 5 minutes |
+| Graph filters | Evidence-only filter works after fixtures pipeline |
+| `rag-eval` | Prints hit@k on fixture queries |
+| `/api/asr` | Clear warning without `[asr]`; works when installed |

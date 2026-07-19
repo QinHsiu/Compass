@@ -3,9 +3,10 @@
 ## Setup checklist
 
 ```bash
-python -m pip install -e "packages/compass-core[dev,studio,live,rag,pdf]"
-python -m pip install -r apps/studio/requirements.txt
-python -m pip install -r apps/interview-live/requirements.txt
+python -m pip install -e "packages/compass-core[dev,live]"
+python -m pip install -r requirements-web.txt
+# optional: [rag] [asr] [pdf] [studio]
+cp .env.example .env
 cd packages/compass-core && pytest -q
 ```
 

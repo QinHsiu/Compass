@@ -1,0 +1,8 @@
+{"query": "RAG evaluation beyond accuracy", "expect_ids": ["qb_ml_004", "qb_llm_agent_002"], "keywords": ["rag", "eval"]}
+{"query": "prompt injection agent tools", "expect_ids": ["qb_llm_agent_003", "qb_ml_008"], "keywords": ["prompt", "injection", "agent"]}
+{"query": "GIL CPU-bound threads python", "expect_ids": ["qb_py_001"], "keywords": ["gil", "python"]}
+{"query": "feature store online offline", "expect_ids": ["qb_ml_003", "qb_sd_004"], "keywords": ["feature", "store"]}
+{"query": "kubernetes CrashLoopBackOff debug", "expect_ids": ["qb_ops_002"], "keywords": ["kubernetes", "crash"]}
+{"query": "LoRA QLoRA fine-tune trade-offs", "expect_ids": ["qb_llm_agent_010"], "keywords": ["lora", "finetune"]}
+{"query": "vector database HNSW IVF RAG", "expect_ids": ["qb_llm_agent_008", "qb_ml_012"], "keywords": ["vector", "hnsw"]}
+{"query": "blue green canary deployment", "expect_ids": ["qb_ops_001"], "keywords": ["canary", "deploy"]}

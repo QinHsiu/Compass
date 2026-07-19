@@ -42,14 +42,23 @@ DeepInterview、alading、OfferCat、offerMaster 等在实时语音上很强。C
 ```bash
 git clone https://github.com/QinHsiu/Compass.git
 cd Compass
+cp .env.example .env   # 密钥可选
 docker compose up --build
-# Studio http://127.0.0.1:7860  → 点「一键 Demo 流水线」
-# Live   http://127.0.0.1:8766  → 证据图谱 / 实时面试
+# → http://127.0.0.1:8766/  Compass Web（主界面）
 ```
 
-或：`pip install -e "packages/compass-core[dev,studio,live,rag]"` 后 `python -m compass_core.cli studio --root content`。
+分层安装：`pip install -e packages/compass-core[live] && pip install -r requirements-web.txt`。  
+Hugging Face Space 卡见 `README_SPACE.md`（仅 fixtures）。建议机器 **≥4GB RAM**。
 
-Hugging Face Space 卡见仓库 `README_SPACE.md`（仅 fixtures）。
+## 3 分钟演示脚本（录屏/直播用）
+
+1. 打开 `http://127.0.0.1:8766/`，侧栏语言选「中文」。
+2. **求职准备** → 点「试用示例岗位」→ 等待匹配分与四类结果 Tab。
+3. 下滑内嵌 **证据图谱**：只勾选「证据」，搜索某个 `ev_`，点击边查看对端。
+4. **模拟面试** → 开始 → 故意答一句无证据的话 → 展示门禁未通过 → 再引用 `evidence_id` 重答。
+5. （可选）题库搜 `RAG`，展示中英对照题干。
+
+截图示意：[docs/assets/demo-pipeline.svg](assets/demo-pipeline.svg)。
 
 ## Call to action
 

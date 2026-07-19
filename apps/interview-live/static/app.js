@@ -184,8 +184,15 @@
     $("pipeResume").innerHTML = renderMd(m.resume_md || "");
     $("pipeSession").innerHTML = renderMd(m.session_md || "");
     $("pipeReport").innerHTML = renderMd(m.report_md || "");
-    $("pipeGraph").href = m.graph_path || "/timeline";
-    $("btnGraph").href = m.graph_path || "/timeline";
+    const gpath = m.graph_path || "/timeline";
+    $("pipeGraph").href = gpath;
+    $("btnGraph").href = gpath;
+    const panel = $("graphEmbedPanel");
+    const frame = $("graphFrame");
+    if (panel && frame) {
+      panel.hidden = false;
+      frame.src = gpath;
+    }
     showResultTab("summary");
     if (announce) toast(t.toastDone);
   }
@@ -424,17 +431,68 @@
     $("answer").value = "";
   };
   $("btnMic").onclick = () => {
+    if ($("useWhisper")?.checked) {
+      toast(t.asrHint);
+      return;
+    }
     if (!Rec) return toast(t.toastNoSpeech);
     const r = new Rec();
     r.lang = { zh: "zh-CN", en: "en-US", ja: "ja-JP", es: "es-ES" }[lang] || "zh-CN";
     r.onresult = (e) => {
       $("answer").value = e.results[0][0].transcript;
     };
+    r.onerror = () => toast(t.toastNoSpeech);
     r.start();
     $("ivStatus").textContent = t.ivConnecting;
     r.onend = () => {
       $("ivStatus").textContent = ivWs && ivWs.readyState === 1 ? t.ivLive : t.ivIdle;
     };
+  };
+
+  let mediaRec = null;
+  let mediaChunks = [];
+  $("btnRec").onclick = async () => {
+    const hint = $("asrHint");
+    if (mediaRec && mediaRec.state !== "inactive") {
+      mediaRec.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaChunks = [];
+      mediaRec = new MediaRecorder(stream);
+      mediaRec.ondataavailable = (e) => {
+        if (e.data.size) mediaChunks.push(e.data);
+      };
+      mediaRec.onstop = async () => {
+        stream.getTracks().forEach((tr) => tr.stop());
+        const blob = new Blob(mediaChunks, { type: "audio/webm" });
+        const fd = new FormData();
+        fd.append("file", blob, "oral.webm");
+        fd.append("language", lang === "en" ? "en" : "zh");
+        if (hint) hint.textContent = t.asrRunning;
+        try {
+          const r = await fetch("/api/asr", { method: "POST", body: fd });
+          const data = await r.json();
+          if (data.text) {
+            $("answer").value = (($("answer").value || "") + " " + data.text).trim();
+            toast(data.text.slice(0, 40));
+          } else {
+            toast(data.warning || t.asrFail);
+          }
+          if (hint) hint.textContent = data.warning || t.asrHint;
+        } catch (e) {
+          toast(t.asrFail);
+          if (hint) hint.textContent = t.asrFail;
+        }
+        $("btnRec").textContent = t.btnRec;
+      };
+      mediaRec.start();
+      $("btnRec").textContent = "■";
+      if (hint) hint.textContent = t.asrRunning;
+    } catch (e) {
+      toast(t.asrFail);
+    }
   };
 
   document.querySelectorAll("[data-tab]").forEach((btn) => {

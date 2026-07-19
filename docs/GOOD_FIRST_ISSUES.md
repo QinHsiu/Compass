@@ -4,10 +4,15 @@
 
 | # | 标题 | 标签 | 说明 |
 |:--|:-----|:-----|:-----|
-| 1 | 增补 LLM/Agent 题库 5 条 | `bank` `good first issue` | 向 `packages/compass-core/compass_core/assets/questions/` 或用户 `content/questions/extra.jsonl` 追加合规公开题，含 `id/topic/q/tags/source` |
-| 2 | Studio 移动端 CSS 微调 | `ui` `good first issue` | 在 `apps/studio/app.py` 的 `@media (max-width:520px)` 下改善 Tab/按钮间距，附 375px 截图 |
+| 1 | 增补 LLM/Agent 题库 5 条 | `bank` `good first issue` | 向 `assets/questions/` 或 `content/questions/extra.jsonl` 追加合规公开题，含 `id/topic/q/tags/source`，并尽量补 `i18n_zh.json` |
+| 2 | Web 移动端 CSS 微调 | `ui` `good first issue` | 在 `apps/interview-live/static/app.css` 的窄屏断点下改善侧栏/结果区，附 375px 截图 |
 | 3 | 文档错别字 / 链接检查 | `docs` `good first issue` | 扫 README、COMPLIANCE、launch 文，修死链与中英不一致 |
 | 4 | Timeline 边 case | `core` `good first issue` | 无 resume.json 仅有 oral_log 时，`build_timeline` 仍应产出 interview 节点；补 pytest |
-| 5 | 西语文案 | `i18n` `good first issue` | 为 Studio「关于」或 Live 静态页补简短 Español 说明，保持语气与中英一致 |
+| 5 | 西语文案 | `i18n` `good first issue` | 为 Web `i18n.js` 的 Español 补齐漏翻键名，保持语气一致 |
+| 6 | 图谱筛选 UX | `ui` `good first issue` | 在 `/timeline` 增加「仅显示有边的节点」开关，或记住筛选状态到 `localStorage` |
+| 7 | `.env.example` 文案 | `docs` `good first issue` | 为 DeepSeek / Ollama 各补一段「复制即用」注释示例（勿提交真实密钥） |
+| 8 | 行业题库起步 | `bank` `good first issue` | 新增 `content/questions/extra.jsonl` 示例：finance 或 consulting 主题各 3 题（合规来源） |
+| 9 | rag-eval 查询扩充 | `core` `good first issue` | 向 `content/fixtures/demo/rag_queries.jsonl` 再加 3 条带 `expect_ids` 的查询 |
+| 10 | Demo 截图更新 | `docs` `good first issue` | 用最新 Web UI 重导出 `docs/assets/demo-pipeline.svg`（或提供 png） |
 
 开 Issue 时请使用模板：`.github/ISSUE_TEMPLATE/`。

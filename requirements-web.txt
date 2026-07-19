@@ -1,0 +1,8 @@
+# Minimal deps to run Compass Web (port 8766)
+# pip install -e packages/compass-core
+# pip install -r requirements-web.txt
+
+fastapi>=0.110,<0.120
+uvicorn[standard]>=0.27,<0.35
+websockets>=12.0,<16
+python-multipart>=0.0.9,<0.1

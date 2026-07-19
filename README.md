@@ -7,10 +7,12 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.5.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.6.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/QinHsiu/Compass?style=for-the-badge&labelColor=1A2332)](https://github.com/QinHsiu/Compass/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/QinHsiu/Compass?style=for-the-badge&labelColor=1A2332)](https://github.com/QinHsiu/Compass/issues)
 
 <br/>
 
@@ -41,29 +43,33 @@
 
 ## 快速开始 / Quick Start
 
-```bash
-# Windows
-.\scripts\install.ps1
-pip install -e "packages/compass-core[dev,studio,live,rag]"
-pip install -r apps/studio/requirements.txt
-pip install -r apps/interview-live/requirements.txt
+**硬件建议（Docker）**：≥ **4GB RAM**、2 CPU。轻量本地可不装 `[rag]`。  
+环境变量模板：[`.env.example`](.env.example)（密钥**可选**；无 Key 仍可跑 Demo）。
 
-# Docker（推荐 · WebSocket 主界面）
+```bash
+# 1) 分层安装（推荐）
+pip install -e "packages/compass-core"                 # 核心 CLI
+pip install -e "packages/compass-core[live]"           # Web 主界面
+pip install -r requirements-web.txt                    # 钉版本范围
+# 可选：
+# pip install -e "packages/compass-core[rag]"          # Chroma 语义检索
+# pip install -e "packages/compass-core[asr]"          # faster-whisper
+# pip install -e "packages/compass-core[pdf,dev,studio]"
+
+# 2) Docker（推荐试用）
+cp .env.example .env   # 按需填写
 docker compose up --build
-# → http://127.0.0.1:8766/  宽屏 Web 工作台
+# → http://127.0.0.1:8766/
 # 可选 Gradio：docker compose --profile gradio up
 
-# 本地（主界面）
+# 3) 本地 Web
 python -m compass_core.cli web --root content --port 8766
-python -m compass_core.cli export-report --root content
-# 可选旧版 Gradio
-python -m compass_core.cli studio --root content --port 7860
 ```
 
-HF Space：[README_SPACE.md](README_SPACE.md)（仅 fixtures）· 传播文：[docs/launch_article_zh.md](docs/launch_article_zh.md) · [Good First Issues](docs/GOOD_FIRST_ISSUES.md)
+演示截图见 [docs/assets/demo-pipeline.svg](docs/assets/demo-pipeline.svg)。  
+HF Space：[README_SPACE.md](README_SPACE.md) · 传播文：[docs/launch_article_zh.md](docs/launch_article_zh.md) · [Good First Issues](docs/GOOD_FIRST_ISSUES.md) · [Star the repo](https://github.com/QinHsiu/Compass)
 
-Unix: `./install.sh` then the same `crawl-llm` / `studio` commands.
-
+依赖复现：见 [`requirements-lock.txt`](requirements-lock.txt)（如何 regenerate 见文件头注释）。
 ---
 
 ## Compass Web（主界面）
