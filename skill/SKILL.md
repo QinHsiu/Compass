@@ -153,6 +153,9 @@ python -m compass_core.cli resume-patch --root content --job-id <id> --theme tec
 
 Theme attribution: `packages/compass-core/compass_core/assets/templates/SOURCES.md`.
 
+7. **One-page polish (optional)** — timeline, 问题/方法/结果, papers block, whitespace budget, privacy: [reference/resume-onepage.md](reference/resume-onepage.md). Hooks template: [reference/interview-hooks-template.md](reference/interview-hooks-template.md). Anonymous shape: `content/fixtures/resume_onepage_example.json`.
+8. **Privacy**: real resumes / evidence / profile / PDFs stay under gitignored `content/*`. Never commit or push user CV text, phone, email, employer metrics, or hook docs with real stories.
+
 ### `/interview`
 
 1. Require `job_id`. Pack JD + matched evidence:

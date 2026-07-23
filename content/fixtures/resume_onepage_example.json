@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "meta": {
+    "name": "Example Candidate",
+    "role": "Example Role · Application Focus",
+    "contact_line": "City · email@example.com · github.com/example"
+  },
+  "summary": "One-sentence spine + one metric + one extension track. No real PII.",
+  "skills": [
+    {"label": "Core", "body": "Skill A; Skill B; Skill C"},
+    {"label": "Data", "body": "Cleaning; eval; pipelines"},
+    {"label": "Apply", "body": "RAG; agents; shipping"}
+  ],
+  "experience": {
+    "title": "Example Corp ｜ Example Title",
+    "dates": "2024.01 – Present",
+    "note": "Intern then full-time (example)",
+    "bullets": [
+      "Owned example data loop for training/eval",
+      "Shipped example product surface with measurable lift"
+    ]
+  },
+  "projects": [
+    {
+      "title": "① Flagship training project【owner】",
+      "dates": "2024.01 – 2024.06",
+      "bullets": [
+        "问题：…",
+        "方法：…",
+        "结果：…"
+      ]
+    },
+    {
+      "title": "② Concurrent extension【contributor】",
+      "dates": "2024.01 – 2024.06",
+      "bullets": [
+        "问题：…",
+        "方法：…",
+        "结果：…"
+      ]
+    }
+  ],
+  "education": [
+    {"title": "Example University ｜ M.S. Example", "dates": "2021 – 2024"},
+    {"title": "Example University ｜ B.S. Example", "dates": "2017 – 2021"}
+  ],
+  "papers": {
+    "lead": "Example domain · first author · cites N+ · github.com/example",
+    "items": [
+      {
+        "bullet": "PaperA｜Venue 20XX：one-line contribution",
+        "en_title": "Full English Title Of Paper A"
+      }
+    ]
+  }
+}

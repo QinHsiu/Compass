@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 — 2026-07-24
+
+- Skill: `/resume` one-page polish spec (`skill/reference/resume-onepage.md`) — timeline, 问题/方法/结果, papers block, whitespace budget, privacy rules
+- Skill: interview hooks template (no PII); anonymous `content/fixtures/resume_onepage_example.json`
+- Gitignore: extra guards against resume PDFs, hooks, quality reviews, onepage extractors (never commit real CV / experience payloads)
+
 ## 0.7.0 — 2026-07-19
 
 - `/life` 兴趣探索 → 职业规划：置信度分流（直接规划 vs Holland RIASEC 测评）

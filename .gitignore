@@ -65,6 +65,16 @@ content/rag/*
 content/life/*
 !content/life/.gitkeep
 
+# Resume / CV PII — belt and suspenders (never ship)
+*简历*
+*resume*personal*
+*_onepage*.pdf
+*_resume_preview.png
+**/_onepage_extract.txt
+**/interview_hooks*.md
+**/quality_review*.md
+**/export_onepage_pdf.py
+
 # Crawl snapshots can be regenerated
 collectors/snapshots/
 
