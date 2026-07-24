@@ -494,7 +494,11 @@ async def ws_interview(websocket: WebSocket, job_id: str):
                             {
                                 "q": q,
                                 "answer": answer,
-                                "gate": gate.status,
+                                "gate": {
+                                    "ok": gate.ok,
+                                    "status": gate.status,
+                                    "reason": gate.reason,
+                                },
                                 "evidence_ids": gate.evidence_ids,
                                 "turn": turn,
                             },
@@ -502,6 +506,21 @@ async def ws_interview(websocket: WebSocket, job_id: str):
                         )
                         + "\n"
                     )
+                try:
+                    from compass_core.scorecard import record_answer
+
+                    record_answer(
+                        root,
+                        jid,
+                        turn=turn,
+                        question=q,
+                        answer=answer,
+                        gate_ok=gate.ok,
+                        gate_status=gate.status,
+                        gate_reason=gate.reason,
+                    )
+                except Exception:
+                    pass
                 await websocket.send_json(
                     {
                         "type": "gate",

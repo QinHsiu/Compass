@@ -177,10 +177,19 @@ def interview_and_save(root: Path, job_id: str, lang: str = "zh") -> dict:
     (out / "bank_hits.json").write_text(
         json.dumps(pack.get("bank_hits") or [], ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    # Ensure empty scorecard exists; sync table if prior answers present
+    from .scorecard import load_scorecard, save_scorecard, sync_session_md
+
+    sc = load_scorecard(root, job_id)
+    if not (out / "scorecard.json").is_file():
+        save_scorecard(root, job_id, sc)
+    else:
+        sync_session_md(root, job_id, sc)
     return {
         "job_id": job_id,
         "evidence_n": len(pack.get("evidence") or []),
         "bank_n": len(pack.get("bank_hits") or []),
+        "scorecard_path": str(out / "scorecard.json"),
         "path": str(out),
     }
 

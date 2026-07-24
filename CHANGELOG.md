@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.4 — 2026-07-25
+
+- Core: **interview scorecard** (`scorecard.py`) — per-answer rubric (substance/structure/relevance/credibility/jd_fit) + evidence_ids + requirement_ids (interview-coach-skill Round 3)
+- Artifacts: `interviews/{job_id}/scorecard.json`; sync fills `session.md` Scorecard table
+- CLI: `scorecard record|show|sync|import-oral`
+- WebSocket live: each answer also calls `record_answer`
+
 ## 0.7.3 — 2026-07-25
 
 - Core: **Requirement Evidence Matrix** (`match_explain`) — per JD line `direct` / `partial` / `gap` + severity + recommendation band (job-resume-tailor Round 2)

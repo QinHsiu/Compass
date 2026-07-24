@@ -177,9 +177,17 @@ Theme attribution: `packages/compass-core/compass_core/assets/templates/SOURCES.
 python -m compass_core.cli interview-pack --root content --job-id <id>
 ```
 
-2. Generate: warm-up, JD deep-dive, STAR stories, stress follow-ups, **retrieved bank questions**, scorecard.
+2. Generate: warm-up, JD deep-dive, STAR stories (requirement-mapped), stress follow-ups, **retrieved bank questions**, scorecard.
 3. Every sample answer cites `evidence_id`.
-4. Write `content/interviews/{job_id}/session.md` (+ `pack.json`, `bank_hits.json`).
+4. Write `content/interviews/{job_id}/session.md` (+ `pack.json`, `bank_hits.json`, **`scorecard.json`**).
+5. Persist per-answer rubric after practice turns:
+
+```bash
+python -m compass_core.cli scorecard record --root content --job-id <id> --turn 0 \
+  --question "..." --answer-file ans.txt --requirement-ids hard_01
+python -m compass_core.cli scorecard show --root content --job-id <id>
+python -m compass_core.cli scorecard sync --root content --job-id <id>
+```
 
 Bank sources: `assets/questions/SOURCES.md`. Extend with `content/questions/extra.jsonl`.
 

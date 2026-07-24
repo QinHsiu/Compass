@@ -338,6 +338,47 @@ def cmd_interview(args) -> int:
     return 0
 
 
+def cmd_scorecard(args) -> int:
+    from .scorecard import import_oral_log, load_scorecard, record_answer, sync_session_md
+
+    root = _root(args)
+    action = args.scorecard_action
+    job_id = args.job_id
+    if action == "show":
+        print(json.dumps(load_scorecard(root, job_id), ensure_ascii=False, indent=2))
+        return 0
+    if action == "sync":
+        path = sync_session_md(root, job_id)
+        print(json.dumps({"synced": str(path) if path else None}, ensure_ascii=False))
+        return 0 if path else 1
+    if action == "import-oral":
+        data = import_oral_log(root, job_id)
+        print(json.dumps({"answers": len(data.get("answers") or []), "aggregate": data.get("aggregate")}, ensure_ascii=False, indent=2))
+        return 0
+    if action == "record":
+        answer = args.answer or ""
+        if args.answer_file:
+            answer = Path(args.answer_file).read_text(encoding="utf-8")
+        scores = None
+        if args.scores:
+            scores = json.loads(args.scores)
+        reqs = [r.strip() for r in (args.requirement_ids or "").split(",") if r.strip()]
+        data = record_answer(
+            root,
+            job_id,
+            turn=args.turn,
+            question=args.question or "",
+            answer=answer,
+            scores=scores,
+            requirement_ids=reqs,
+            notes=args.note or "",
+        )
+        print(json.dumps({"aggregate": data.get("aggregate"), "answers": len(data.get("answers") or [])}, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown scorecard action {action}"}, ensure_ascii=False))
+    return 2
+
+
 def cmd_diagnose(args) -> int:
     root = _root(args)
     if args.fixture:
@@ -581,6 +622,29 @@ def build_parser() -> argparse.ArgumentParser:
     i = sub.add_parser("interview-pack", parents=[parent], help="build interview pack + session")
     i.add_argument("--job-id", required=True)
     i.set_defaults(func=cmd_interview)
+
+    sc = sub.add_parser("scorecard", parents=[parent], help="interview rubric scorecard")
+    sc_sub = sc.add_subparsers(dest="scorecard_action", required=True)
+    sc_show = sc_sub.add_parser("show", help="print scorecard.json")
+    sc_show.add_argument("--job-id", required=True)
+    sc_show.set_defaults(func=cmd_scorecard)
+    sc_sync = sc_sub.add_parser("sync", help="fill session.md Scorecard from aggregate")
+    sc_sync.add_argument("--job-id", required=True)
+    sc_sync.set_defaults(func=cmd_scorecard)
+    sc_imp = sc_sub.add_parser("import-oral", help="migrate oral_log.jsonl → scorecard")
+    sc_imp.add_argument("--job-id", required=True)
+    sc_imp.set_defaults(func=cmd_scorecard)
+    sc_rec = sc_sub.add_parser("record", help="record one answered turn")
+    sc_rec.add_argument("--job-id", required=True)
+    sc_rec.add_argument("--turn", type=int, required=True)
+    sc_rec.add_argument("--question", default="")
+    sc_rec.add_argument("--answer", default=None)
+    sc_rec.add_argument("--answer-file", default=None)
+    sc_rec.add_argument("--scores", default=None, help='JSON e.g. {"substance":4}')
+    sc_rec.add_argument("--requirement-ids", default="", help="comma-separated hard_01,...")
+    sc_rec.add_argument("--note", default="")
+    sc_rec.set_defaults(func=cmd_scorecard)
+
     di = sub.add_parser("diagnose", parents=[parent], help="gap compass report + bridge plan")
     di.add_argument("--job-id", default=None)
     di.add_argument("--fixture", default=None)

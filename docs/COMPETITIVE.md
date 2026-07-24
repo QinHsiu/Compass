@@ -45,6 +45,17 @@ Upstream: [liheyuting/job-resume-tailor](https://github.com/liheyuting/job-resum
 
 Human table: `content/jobs/{id}/match_explain.md`. CLI: `match-explain --job-id`.
 
+## Learned from interview-coach-skill (Round 3)
+
+Upstream: [noamseg/interview-coach-skill](https://github.com/noamseg/interview-coach-skill) (per-unit scorecards + Score History).
+
+| interview-coach-skill | Compass adaptation (v0.7.4) |
+|:----------------------|:----------------------------|
+| Per-answer 5-dim rubric | `scorecard.answers[].scores` (substance/structure/relevance/credibility/jd_fit) |
+| Score History persistence | `interviews/{job_id}/scorecard.json` + aggregate |
+| Write on every practice turn | CLI `scorecard record` + live WS `record_answer` |
+| Session roll-up | `sync_session_md` fills Scorecard table; `import-oral` migrates jsonl |
+
 ## Out of scope (intentional)
 
 | Item | Why |
