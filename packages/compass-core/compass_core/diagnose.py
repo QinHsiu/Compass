@@ -16,7 +16,7 @@ def _load_job(root: Path, job_id: str) -> tuple[ParsedJD, MatchResult]:
     jd_data = json.loads((job_dir / "jd.json").read_text(encoding="utf-8"))
     match_data = json.loads((job_dir / "match.json").read_text(encoding="utf-8"))
     jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__})
-    match = MatchResult(**{k: match_data[k] for k in MatchResult.__dataclass_fields__})
+    match = MatchResult.from_dict(match_data)
     return jd, match
 
 

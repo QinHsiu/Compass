@@ -10,13 +10,15 @@ from pathlib import Path
 
 from .collectors import collect_career_html, collect_paste, collect_rss
 from .diagnose import diagnose_and_save
-from .evidence import build_index
+from .evidence import build_index, load_evidence
 from .gate import check_claims
-from .intake import save_profile
+from .intake import load_profile, save_profile
 from .interview import interview_and_save
+from .jd import ParsedJD, parse_jd
 from .match import match_and_save
 from .paths import content_root, ensure_dirs
 from .resume import apply_and_save
+from .skill_gap import classify_jd, extract_jd_skills, profile_skill_list
 from .track import upsert
 
 
@@ -70,6 +72,52 @@ def cmd_gate(args) -> int:
     ]
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0 if all(r.ok for r in results) else 2
+
+
+def cmd_skill_gap(args) -> int:
+    """Zero-LLM JD skill-gap preflight (existing / supported_by_evidence / gap)."""
+    root = _root(args)
+    evidence = load_evidence(root)
+    profile = load_profile(root)
+    named = profile_skill_list(profile)
+
+    if args.job_id:
+        jd_path = root / "jobs" / args.job_id / "jd.json"
+        if not jd_path.is_file():
+            print(json.dumps({"error": f"missing {jd_path}"}, ensure_ascii=False))
+            return 1
+        jd_data = json.loads(jd_path.read_text(encoding="utf-8"))
+        jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
+    elif args.jd_file:
+        text = Path(args.jd_file).read_text(encoding="utf-8")
+        jd = parse_jd(text)
+    elif args.text:
+        jd = parse_jd(args.text)
+    else:
+        print(json.dumps({"error": "need --job-id, --jd-file, or --text"}, ensure_ascii=False))
+        return 1
+
+    tokens = extract_jd_skills(jd)
+    gap = classify_jd(jd, evidence, profile_skills=named)
+    out = {
+        "job_id": jd.job_id,
+        "title": jd.title,
+        "tokens": tokens,
+        "skill_gap": gap.to_dict(),
+        "injectable": gap.injectable,
+    }
+    # Persist onto match.json when job already matched
+    if args.job_id:
+        match_path = root / "jobs" / args.job_id / "match.json"
+        if match_path.is_file():
+            match_data = json.loads(match_path.read_text(encoding="utf-8"))
+            match_data["skill_gap"] = gap.to_dict()
+            match_path.write_text(
+                json.dumps(match_data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            out["updated_match"] = str(match_path)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
 
 
 def cmd_discover(args) -> int:
@@ -409,6 +457,16 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--claim", default=None)
     g.add_argument("--claims-file", default=None)
     g.set_defaults(func=cmd_gate)
+
+    sg = sub.add_parser(
+        "skill-gap",
+        parents=[parent],
+        help="JD skill-gap preflight: existing / supported_by_evidence / gap",
+    )
+    sg.add_argument("--job-id", default=None)
+    sg.add_argument("--jd-file", default=None)
+    sg.add_argument("--text", default=None)
+    sg.set_defaults(func=cmd_skill_gap)
 
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
     d.add_argument("--source", choices=("paste", "rss", "career"), required=True)

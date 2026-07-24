@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 — 2026-07-25
+
+- Core: zero-LLM JD **skill-gap** preflight (`compass_core.skill_gap`) — buckets `existing` / `supported_by_evidence` / `gap` (career-ops Round 1)
+- `match.json` includes `skill_gap`; CLI `skill-gap --job-id|--jd-file|--text`
+- `/resume`: never inject `gap` skills into Skills; `ats_report.checklist.no_gap_skills_injected`
+- Docs: COMPETITIVE.md “Learned from career-ops (Round 1)”; Evidence Gate + `/discover`/`/resume` skill notes
+
 ## 0.7.1 — 2026-07-24
 
 - Skill: `/resume` one-page polish spec (`skill/reference/resume-onepage.md`) — timeline, 问题/方法/结果, papers block, whitespace budget, privacy rules

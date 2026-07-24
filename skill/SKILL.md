@@ -76,6 +76,14 @@ Given existing profile + evidence:
    - Else → label `UNVERIFIED` and **do not** present as proven achievement.
 3. Prefer `python -m compass_core.cli gate --claim "..."` or `compass_core.gate.check_claims`.
 4. `/bridge` may propose projects/practice **to build** evidence; never backdate them onto the CV as done work.
+5. **Skill-gap preflight** (zero-LLM): classify JD skills as `existing` / `supported_by_evidence` / `gap` vs the evidence vault. **Never write `gap` skills into the resume Skills section.**
+
+```bash
+python -m compass_core.cli skill-gap --root content --job-id <id>
+# or: --jd-file jd.txt
+```
+
+`match.json` includes `skill_gap`; `ats_report.json` checklist requires `no_gap_skills_injected`.
 
 ---
 
@@ -130,14 +138,18 @@ python -m compass_core.cli discover --root content --source rss --url "https://.
 python -m compass_core.cli discover --root content --source career --url "https://..."
 ```
 
-3. Match against evidence + profile; write `content/jobs/{job_id}/jd.md` + `match.json`.
-4. Present shortlist with coverage %, gaps, top evidence hits.
+3. Match against evidence + profile; write `content/jobs/{job_id}/jd.md` + `match.json` (includes `skill_gap`: existing / supported_by_evidence / gap).
+4. Present shortlist with coverage %, skill gaps, top evidence hits. Optionally re-run:
+
+```bash
+python -m compass_core.cli skill-gap --root content --job-id <id>
+```
 
 ### `/resume`
 
 1. Require `job_id`. Load JD + match + evidence.
 2. Load or create structured resume `content/resumes/{job_id}/resume.json`.
-3. Propose JSON Patch / unified diff only for evidence-backed edits.
+3. Propose JSON Patch / unified diff only for evidence-backed edits. Skills merge = base ∪ `skill_gap.existing` ∪ `skill_gap.supported_by_evidence` — **never** inject `skill_gap.gap`.
 4. Pick or override theme (`ats_plain` … `internship_lite`, 12 total). List via CLI:
 
 ```bash

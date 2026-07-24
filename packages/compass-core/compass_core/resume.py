@@ -68,8 +68,20 @@ def build_targeted_resume(
     """
     evidence = load_evidence(root)
     updated = deepcopy(base)
-    # merge skills from hits + keyword hits
-    skill_set = list(dict.fromkeys((updated.get("skills") or []) + match.keyword_hits[:15]))
+    # Merge only existing ∪ supported_by_evidence — never inject gap skills
+    # (career-ops jd-skill-gap pattern adapted to evidence vault).
+    sg = match.skill_gap or {}
+    injectable = list(
+        dict.fromkeys(
+            [
+                *(updated.get("skills") or []),
+                *(sg.get("existing") or []),
+                *(sg.get("supported_by_evidence") or []),
+            ]
+        )
+    )
+    gap_set = {s.lower() for s in (sg.get("gap") or [])}
+    skill_set = [s for s in injectable if s.lower() not in gap_set][:40]
     updated["skills"] = skill_set
 
     # ensure projects/experience bullets from top evidence
@@ -118,20 +130,26 @@ def ats_report(resume: dict, jd: ParsedJD, match: MatchResult) -> dict:
         for it in resume.get(key) or []:
             bullets.extend(it.get("bullets") or [])
     unverified = [b for b in bullets if "UNVERIFIED" in b.upper()]
+    sg = match.skill_gap or {}
+    gap_lower = {s.lower() for s in (sg.get("gap") or [])}
+    resume_skills = [s for s in (resume.get("skills") or [])]
+    injected_gaps = [s for s in resume_skills if s.lower() in gap_lower]
     return {
         "keyword_coverage": round(len(present) / max(len(jd.keywords), 1), 3),
         "keywords_present": present,
         "keywords_missing": missing,
         "hard_gaps_remaining": match.hard_gaps,
+        "skill_gap": sg,
         "bullet_count": len(bullets),
         "unverified_bullets": unverified,
         "match_score": match.score,
-            "checklist": {
-                "has_skills_section": bool(resume.get("skills")),
-                "has_evidence_citations": "ev_" in json.dumps(resume),
-                "no_unverified_as_fact": len(unverified) == 0,
-            },
-        }
+        "checklist": {
+            "has_skills_section": bool(resume.get("skills")),
+            "has_evidence_citations": "ev_" in json.dumps(resume),
+            "no_unverified_as_fact": len(unverified) == 0,
+            "no_gap_skills_injected": len(injected_gaps) == 0,
+        },
+    }
 
 
 def apply_and_save(
@@ -147,8 +165,8 @@ def apply_and_save(
     from .match import MatchResult
     from .templates import recommend_theme, render_all
 
-    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__})
-    match = MatchResult(**{k: match_data[k] for k in MatchResult.__dataclass_fields__})
+    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
+    match = MatchResult.from_dict(match_data)
 
     out_dir = root / "resumes" / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
