@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.6 — 2026-07-25
+
+- Core: **retracted_claims** (CareerForge Round 5) — aggregate gate fails / hard gaps / skill gaps into interview pack “Do not claim”
+- `ats_report.rejected_bullets` retained from resume gate; session stress section lists risk points
+
 ## 0.7.5 — 2026-07-25
 
 - Core: **track cadence** from match band (clover-public Round 4) — `seed_from_match` writes `match_band` / `suggested_action` / `follow_up_due`

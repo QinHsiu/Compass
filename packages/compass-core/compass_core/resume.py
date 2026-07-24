@@ -97,6 +97,7 @@ def build_targeted_resume(
     # ensure projects/experience bullets from top evidence
     projects = list(updated.get("projects") or [])
     existing_eids = {p.get("evidence_id") for p in projects}
+    rejected_bullets: list[str] = []
     for hit in ordered_hits[:5]:
         eid = hit["evidence_id"]
         if eid in existing_eids:
@@ -107,6 +108,7 @@ def build_targeted_resume(
         bullet = (ev.metrics or ev.actions or ev.title).split("\n")[0][:200]
         kept, rejected = filter_verified_bullets([f"{bullet} ({eid})"], evidence)
         if not kept:
+            rejected_bullets.extend(rejected)
             continue
         projects.append(
             {
@@ -127,11 +129,16 @@ def build_targeted_resume(
 
     patch = jsonpatch.make_patch(base, updated)
     ops = list(patch)
-    ats = ats_report(updated, jd, match)
+    ats = ats_report(updated, jd, match, rejected_bullets=rejected_bullets)
     return updated, ops, ats
 
 
-def ats_report(resume: dict, jd: ParsedJD, match: MatchResult) -> dict:
+def ats_report(
+    resume: dict,
+    jd: ParsedJD,
+    match: MatchResult,
+    rejected_bullets: list[str] | None = None,
+) -> dict:
     text = json.dumps(resume, ensure_ascii=False).lower()
     present = [k for k in jd.keywords if k.lower() in text]
     missing = [k for k in jd.keywords if k.lower() not in text]
@@ -152,6 +159,7 @@ def ats_report(resume: dict, jd: ParsedJD, match: MatchResult) -> dict:
         "skill_gap": sg,
         "bullet_count": len(bullets),
         "unverified_bullets": unverified,
+        "rejected_bullets": list(rejected_bullets or []),
         "match_score": match.score,
         "checklist": {
             "has_skills_section": bool(resume.get("skills")),

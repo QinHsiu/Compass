@@ -66,6 +66,15 @@ Upstream: [fourleafai/clover-public](https://github.com/fourleafai/clover-public
 | Application tracking | `track.seed_from_match` + `follow_up_due` cadence |
 | Next-step nudges | Diagnose auto-seeds board; `track --list-due` |
 
+## Learned from CareerForge (Round 5)
+
+Upstream: [rebecha1227-a11y/CareerForge](https://github.com/rebecha1227-a11y/CareerForge) (mock interview「识别风险点」).
+
+| CareerForge | Compass adaptation (v0.7.6) |
+|:------------|:----------------------------|
+| 识别风险点 / 弱项 | `retracted_claims[]` in pack + session “Do not claim” |
+| Sources | requirement gaps, skill_gap.gap, ats unverified/rejected, scorecard gate fails |
+
 ## Out of scope (intentional)
 
 | Item | Why |

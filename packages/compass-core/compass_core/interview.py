@@ -69,6 +69,9 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "requirement_matrix": match.requirement_matrix,
         "match_explain": match.match_explain,
     }
+    from .retracted import collect_retracted_claims
+
+    pack["retracted_claims"] = collect_retracted_claims(root, job_id)
     return pack
 
 
@@ -125,6 +128,15 @@ def render_session(pack: dict) -> str:
     for m in (pack.get("keyword_misses") or [])[:2]:
         stress.append(f"- 压力题：解释你对 `{m}` 的真实掌握边界。")
 
+    retracted = pack.get("retracted_claims") or []
+    retract_block = ""
+    if retracted:
+        lines = [
+            f"- **勿声称**（{r.get('source')}）：{str(r.get('claim') or '')[:80]} — {r.get('reason')}"
+            for r in retracted[:8]
+        ]
+        retract_block = "\n### Do not claim / 风险点\n" + "\n".join(lines) + "\n"
+
     mx = pack.get("match_explain") or {}
     band = ""
     if mx:
@@ -153,7 +165,7 @@ def render_session(pack: dict) -> str:
 
 ### Stress follow-ups
 {chr(10).join(stress) or '- （暂无）'}
-
+{retract_block}
 {bank_section_title(pack.get('lang') or 'zh')}
 Topics: {', '.join(pack.get('bank_topics') or []) or '—'}
 

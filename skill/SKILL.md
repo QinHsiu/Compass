@@ -179,7 +179,7 @@ python -m compass_core.cli interview-pack --root content --job-id <id>
 
 2. Generate: warm-up, JD deep-dive, STAR stories (requirement-mapped), stress follow-ups, **retrieved bank questions**, scorecard.
 3. Every sample answer cites `evidence_id`.
-4. Write `content/interviews/{job_id}/session.md` (+ `pack.json`, `bank_hits.json`, **`scorecard.json`**).
+4. Write `content/interviews/{job_id}/session.md` (+ `pack.json`, `bank_hits.json`, **`scorecard.json`**, **`retracted_claims`** in pack).
 5. Persist per-answer rubric after practice turns:
 
 ```bash
