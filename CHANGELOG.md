@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5 — 2026-07-25
+
+- Core: **track cadence** from match band (clover-public Round 4) — `seed_from_match` writes `match_band` / `suggested_action` / `follow_up_due`
+- Diagnose auto-seeds track; CLI `track --seed-from-match` / `--list-due`; Desk shows band + due
+
 ## 0.7.4 — 2026-07-25
 
 - Core: **interview scorecard** (`scorecard.py`) — per-answer rubric (substance/structure/relevance/credibility/jd_fit) + evidence_ids + requirement_ids (interview-coach-skill Round 3)

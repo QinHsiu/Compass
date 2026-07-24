@@ -255,10 +255,18 @@ def diagnose_and_save(root: Path, job_id: str) -> dict:
     (out / "bank_drills.json").write_text(
         json.dumps(drills, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    track_item = None
+    try:
+        from .track import seed_from_match
+
+        track_item = seed_from_match(root, job_id)
+    except Exception:
+        track_item = None
     return {
         "job_id": job_id,
         "actions": len(actions),
         "score": match.score,
         "bank_drills": len(drills),
+        "track_item": track_item,
         "path": str(out),
     }

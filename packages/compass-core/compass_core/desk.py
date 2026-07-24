@@ -74,7 +74,11 @@ async function load() {
     `<li><strong>${j.title}</strong> <span class="muted">@ ${j.company}</span><br/>
      <code>${j.job_id}</code> · <span class="score">${j.score}</span></li>`).join('') || '<li class="muted">暂无</li>';
   document.getElementById('track').innerHTML = (d.track||[]).map(t =>
-    `<li><strong>${t.status}</strong> · ${t.title||t.job_id}<br/><span class="muted">${t.note||''}</span></li>`).join('') || '<li class="muted">暂无</li>';
+    `<li><strong>${t.status}</strong> · ${t.title||t.job_id}
+     ${t.match_band?` · <span class="score">${t.match_band}</span>`:''}
+     ${t.suggested_action?` · <code>${t.suggested_action}</code>`:''}<br/>
+     <span class="muted">${t.follow_up_due?('due '+t.follow_up_due+' · '):''}${t.note||''}</span></li>`
+  ).join('') || '<li class="muted">暂无</li>';
   document.getElementById('diag').innerHTML = (d.diagnoses||[]).map(x =>
     `<li><code>${x}</code></li>`).join('') || '<li class="muted">暂无</li>';
   document.getElementById('ev').innerHTML = (d.evidence||[]).map(e =>

@@ -217,11 +217,15 @@ python -m compass_core.cli diagnose --root content --job-id <id>
 
 1. Update `content/track/board.json` states:
    `wishlist → applied → interviewing → offer | rejected | ghosted`
-2. Link `job_id`, dates, next follow-up.
+2. Link `job_id`, dates, next follow-up. Prefer seeding from match band:
 
 ```bash
+python -m compass_core.cli track --root content --job-id <id> --seed-from-match
+python -m compass_core.cli track --root content --list-due
 python -m compass_core.cli track --root content --job-id <id> --status applied
 ```
+
+`/diagnose` auto-seeds `match_band` / `suggested_action` / `follow_up_due` (strong→apply_now +3d, plausible→tailor_then_apply +2d, exploratory→bridge_then_rematch +7d, skip→do_not_apply).
 
 ### `/desk`
 

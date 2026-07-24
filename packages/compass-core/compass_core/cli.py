@@ -416,7 +416,30 @@ def _load_fixture(root: Path, fixture_dir: Path) -> None:
 
 
 def cmd_track(args) -> int:
-    item = upsert(_root(args), args.job_id, args.status, note=args.note or "")
+    from .track import list_due, seed_from_match, upsert
+
+    root = _root(args)
+    if getattr(args, "list_due", False):
+        items = list_due(root)
+        print(json.dumps({"due": items, "count": len(items)}, ensure_ascii=False, indent=2))
+        return 0
+    if getattr(args, "seed_from_match", False):
+        if not args.job_id:
+            print(json.dumps({"error": "--job-id required with --seed-from-match"}, ensure_ascii=False))
+            return 1
+        item = seed_from_match(root, args.job_id)
+        print(json.dumps(item, ensure_ascii=False, indent=2))
+        return 0
+    if not args.job_id or not args.status:
+        print(json.dumps({"error": "need --job-id and --status (or --list-due / --seed-from-match)"}, ensure_ascii=False))
+        return 1
+    item = upsert(
+        root,
+        args.job_id,
+        args.status,
+        note=args.note or "",
+        follow_up_due=getattr(args, "follow_up_due", None),
+    )
     print(json.dumps(item, ensure_ascii=False, indent=2))
     return 0
 
@@ -651,9 +674,12 @@ def build_parser() -> argparse.ArgumentParser:
     di.set_defaults(func=cmd_diagnose)
 
     t = sub.add_parser("track", parents=[parent], help="update application board")
-    t.add_argument("--job-id", required=True)
-    t.add_argument("--status", required=True)
+    t.add_argument("--job-id", default=None)
+    t.add_argument("--status", default=None)
     t.add_argument("--note", default="")
+    t.add_argument("--follow-up-due", default=None, help="ISO date YYYY-MM-DD")
+    t.add_argument("--seed-from-match", action="store_true", help="seed band + follow_up_due from match_explain")
+    t.add_argument("--list-due", action="store_true", help="list items with follow_up_due <= today")
     t.set_defaults(func=cmd_track)
 
     desk = sub.add_parser("desk", parents=[parent], help="start local desk UI")

@@ -56,6 +56,16 @@ Upstream: [noamseg/interview-coach-skill](https://github.com/noamseg/interview-c
 | Write on every practice turn | CLI `scorecard record` + live WS `record_answer` |
 | Session roll-up | `sync_session_md` fills Scorecard table; `import-oral` migrates jsonl |
 
+## Learned from clover-public (Round 4)
+
+Upstream: [fourleafai/clover-public](https://github.com/fourleafai/clover-public) (analyze-JD apply bands + application tracking).
+
+| clover-public | Compass adaptation (v0.7.5) |
+|:--------------|:----------------------------|
+| Score bands → apply / tailor / skip | `match_explain.recommendation` → `suggested_action` via `BAND_POLICY` |
+| Application tracking | `track.seed_from_match` + `follow_up_due` cadence |
+| Next-step nudges | Diagnose auto-seeds board; `track --list-due` |
+
 ## Out of scope (intentional)
 
 | Item | Why |
