@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.3 — 2026-07-25
+
+- Core: **Requirement Evidence Matrix** (`match_explain`) — per JD line `direct` / `partial` / `gap` + severity + recommendation band (job-resume-tailor Round 2)
+- Artifacts: `match.json` fields `requirement_matrix` / `match_explain`; human table `match_explain.md`
+- CLI: `match-explain --job-id`
+- Diagnose / interview / resume consume matrix (fatal P0, requirement-mapped STAR, evidence priority)
+
 ## 0.7.2 — 2026-07-25
 
 - Core: zero-LLM JD **skill-gap** preflight (`compass_core.skill_gap`) — buckets `existing` / `supported_by_evidence` / `gap` (career-ops Round 1)

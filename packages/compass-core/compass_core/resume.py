@@ -84,10 +84,20 @@ def build_targeted_resume(
     skill_set = [s for s in injectable if s.lower() not in gap_set][:40]
     updated["skills"] = skill_set
 
+    # Prefer evidence that covers more JD requirement rows (matrix-weighted)
+    from .match_explain import evidence_priority_from_matrix
+
+    prio = evidence_priority_from_matrix(match.requirement_matrix or [])
+    ordered_hits = sorted(
+        match.evidence_hits,
+        key=lambda h: (prio.get(h["evidence_id"], 0.0), h.get("score") or 0),
+        reverse=True,
+    )
+
     # ensure projects/experience bullets from top evidence
     projects = list(updated.get("projects") or [])
     existing_eids = {p.get("evidence_id") for p in projects}
-    for hit in match.evidence_hits[:5]:
+    for hit in ordered_hits[:5]:
         eid = hit["evidence_id"]
         if eid in existing_eids:
             continue

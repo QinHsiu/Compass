@@ -22,21 +22,68 @@ def _load_job(root: Path, job_id: str) -> tuple[ParsedJD, MatchResult]:
 
 def build_actions(jd: ParsedJD, match: MatchResult) -> list[dict]:
     actions: list[dict] = []
-    # Evidence gaps from hard_gaps
-    for gap in match.hard_gaps[:5]:
+    matrix = match.requirement_matrix or []
+    fatal_rows = [r for r in matrix if r.get("severity") == "fatal"]
+    material_gaps = [
+        r for r in matrix if r.get("kind") == "hard" and r.get("fit") == "gap" and r.get("severity") != "fatal"
+    ]
+    partial_rows = [r for r in matrix if r.get("fit") == "partial" and r.get("evidence_ids")]
+
+    # Evidence: fatal / material hard gaps from requirement matrix (prefer over coarse hard_gaps)
+    for row in fatal_rows[:5]:
         actions.append(
             {
                 "quadrant": "evidence",
                 "priority": "P0",
-                "what": f"补齐可验证经历以覆盖：{gap[:80]}",
+                "what": f"致命缺口（{row.get('id')}）：补齐可验证经历 — {str(row.get('text') or '')[:80]}",
                 "proof": "新 evidence 条目（含指标/链接）",
                 "eta": "3-7天",
-                "related_evidence": [],
-                "related_jd_keywords": [k for k in match.keyword_misses if k.lower() in gap.lower()][:5],
+                "related_evidence": list(row.get("evidence_ids") or []),
+                "related_jd_keywords": [k for k in match.keyword_misses if k.lower() in str(row.get("text") or "").lower()][:5],
             }
         )
-    # Narrative: have hits but maybe weak presentation
-    if match.evidence_hits and match.score < 85:
+    if not fatal_rows:
+        for row in material_gaps[:3]:
+            actions.append(
+                {
+                    "quadrant": "evidence",
+                    "priority": "P0",
+                    "what": f"硬性缺口（{row.get('id')}）：{str(row.get('text') or '')[:80]}",
+                    "proof": "新 evidence 条目（含指标/链接）",
+                    "eta": "3-7天",
+                    "related_evidence": [],
+                    "related_jd_keywords": [k for k in match.keyword_misses if k.lower() in str(row.get("text") or "").lower()][:5],
+                }
+            )
+    if not fatal_rows and not material_gaps:
+        for gap in match.hard_gaps[:5]:
+            actions.append(
+                {
+                    "quadrant": "evidence",
+                    "priority": "P0",
+                    "what": f"补齐可验证经历以覆盖：{gap[:80]}",
+                    "proof": "新 evidence 条目（含指标/链接）",
+                    "eta": "3-7天",
+                    "related_evidence": [],
+                    "related_jd_keywords": [k for k in match.keyword_misses if k.lower() in gap.lower()][:5],
+                }
+            )
+
+    # Narrative: elevate partial evidence metrics for a requirement
+    for row in partial_rows[:2]:
+        eids = list(row.get("evidence_ids") or [])[:2]
+        actions.append(
+            {
+                "quadrant": "narrative",
+                "priority": "P1",
+                "what": f"把 {', '.join(eids)} 的指标前置，对齐 JD「{str(row.get('text') or '')[:40]}」",
+                "proof": "更新后的 resume.md（含 evidence_id）",
+                "eta": "0.5天",
+                "related_evidence": eids,
+                "related_jd_keywords": match.keyword_hits[:5],
+            }
+        )
+    if not partial_rows and match.evidence_hits and match.score < 85:
         eids = [h["evidence_id"] for h in match.evidence_hits[:3]]
         actions.append(
             {
@@ -49,8 +96,10 @@ def build_actions(jd: ParsedJD, match: MatchResult) -> list[dict]:
                 "related_jd_keywords": match.keyword_hits[:5],
             }
         )
-    # Skill gaps from keyword misses
-    for kw in match.keyword_misses[:5]:
+
+    # Skill gaps from keyword misses + skill_gap.gap
+    skill_gaps = list((match.skill_gap or {}).get("gap") or [])[:5]
+    for kw in skill_gaps or match.keyword_misses[:5]:
         actions.append(
             {
                 "quadrant": "skill",
@@ -62,12 +111,15 @@ def build_actions(jd: ParsedJD, match: MatchResult) -> list[dict]:
                 "related_jd_keywords": [kw],
             }
         )
-    # Process
+
+    # Process — include recommendation band when available
+    band = (match.match_explain or {}).get("recommendation") or ""
+    band_note = f"（match 建议：{band}）" if band else ""
     actions.append(
         {
             "quadrant": "process",
             "priority": "P2",
-            "what": "将该岗位写入 /track，并设定 3 日内跟进节点",
+            "what": f"将该岗位写入 /track，并设定 3 日内跟进节点{band_note}",
             "proof": "content/track/board.json 状态更新",
             "eta": "15分钟",
             "related_evidence": [],
@@ -96,6 +148,14 @@ def render_report(jd: ParsedJD, match: MatchResult, actions: list[dict]) -> str:
         f"命中 {len(match.keyword_hits)}，缺失 {len(match.keyword_misses)}；"
         f"硬性缺口 {len(match.hard_gaps)} 条。"
     )
+    mx = match.match_explain or {}
+    if mx:
+        summary += (
+            f" 矩阵分 {mx.get('matrix_score', '—')}，建议 `{mx.get('recommendation', '—')}`"
+            f"（置信 {mx.get('confidence', '—')}；"
+            f"direct/partial/gap={mx.get('direct_count', 0)}/{mx.get('partial_count', 0)}/{mx.get('gap_count', 0)}；"
+            f"fatal={mx.get('fatal_count', 0)}）。"
+        )
     return f"""# Diagnose: {jd.title} @ {jd.company}
 
 **job_id**: `{jd.job_id}`  

@@ -66,6 +66,8 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "bank_topics": topics,
         "bank_hits": bank_hits,
         "lang": lang,
+        "requirement_matrix": match.requirement_matrix,
+        "match_explain": match.match_explain,
     }
     return pack
 
@@ -88,24 +90,52 @@ def render_session(pack: dict) -> str:
         deep = ["1. 描述你与本岗位关键词最相关的一段经历。"]
 
     star = []
-    for e in (pack.get("evidence") or [])[:3]:
+    for row in pack.get("requirement_matrix") or []:
+        if row.get("kind") != "hard" or row.get("fit") not in ("direct", "partial"):
+            continue
+        eids = row.get("evidence_ids") or []
+        eid = eids[0] if eids else "?"
         star.append(
-            f"- STAR around `{e['evidence_id']}` ({e['title']}): "
-            f"Result 必须使用证据中的指标或标 UNVERIFIED。"
+            f"- STAR `{row.get('id')}` → `{eid}`（{row.get('fit')}）: "
+            f"对齐「{str(row.get('text') or '')[:50]}」；Result 必须用证据指标或标 UNVERIFIED。"
         )
+        if len(star) >= 4:
+            break
+    if not star:
+        for e in (pack.get("evidence") or [])[:3]:
+            star.append(
+                f"- STAR around `{e['evidence_id']}` ({e['title']}): "
+                f"Result 必须使用证据中的指标或标 UNVERIFIED。"
+            )
     if not star:
         star = ["- 无匹配证据：先 /evidence 再模拟；勿编造 STAR。"]
 
     stress = []
-    for g in (pack.get("gaps") or [])[:3]:
-        stress.append(f"- 追问：你简历未覆盖「{g[:50]}」，如何在到岗前补齐？（指向 /bridge，勿谎称已做过）")
+    for row in pack.get("requirement_matrix") or []:
+        if row.get("kind") == "hard" and row.get("fit") == "gap":
+            stress.append(
+                f"- 追问 `{row.get('id')}`（{row.get('severity')}）："
+                f"简历未覆盖「{str(row.get('text') or '')[:50]}」，如何到岗前补齐？（/bridge，勿谎称已做过）"
+            )
+        if len(stress) >= 3:
+            break
+    if not stress:
+        for g in (pack.get("gaps") or [])[:3]:
+            stress.append(f"- 追问：你简历未覆盖「{g[:50]}」，如何在到岗前补齐？（指向 /bridge，勿谎称已做过）")
     for m in (pack.get("keyword_misses") or [])[:2]:
         stress.append(f"- 压力题：解释你对 `{m}` 的真实掌握边界。")
 
+    mx = pack.get("match_explain") or {}
+    band = ""
+    if mx:
+        band = (
+            f"\n**match band**: `{mx.get('recommendation', '—')}` · "
+            f"matrix={mx.get('matrix_score', '—')} · confidence={mx.get('confidence', '—')}\n"
+        )
+
     return f"""# Interview session: {pack['title']} @ {pack['company']}
 
-**job_id**: `{pack['job_id']}`
-
+**job_id**: `{pack['job_id']}`{band}
 ## Pack evidence
 
 {ev_list}
@@ -118,7 +148,7 @@ def render_session(pack: dict) -> str:
 ### JD deep-dive
 {chr(10).join(deep)}
 
-### STAR stories
+### STAR stories (requirement-mapped)
 {chr(10).join(star)}
 
 ### Stress follow-ups
@@ -137,7 +167,6 @@ Topics: {', '.join(pack.get('bank_topics') or []) or '—'}
 | Communication |  |  |  |
 | JD fit |  |  |  |
 """
-
 
 def interview_and_save(root: Path, job_id: str, lang: str = "zh") -> dict:
     pack = build_pack(root, job_id, lang=lang)

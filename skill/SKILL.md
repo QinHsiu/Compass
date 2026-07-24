@@ -138,11 +138,12 @@ python -m compass_core.cli discover --root content --source rss --url "https://.
 python -m compass_core.cli discover --root content --source career --url "https://..."
 ```
 
-3. Match against evidence + profile; write `content/jobs/{job_id}/jd.md` + `match.json` (includes `skill_gap`: existing / supported_by_evidence / gap).
-4. Present shortlist with coverage %, skill gaps, top evidence hits. Optionally re-run:
+3. Match against evidence + profile; write `content/jobs/{job_id}/jd.md` + `match.json` (includes `skill_gap` and **`requirement_matrix`**: per-line direct/partial/gap + `match_explain` band).
+4. Present shortlist with coverage %, skill gaps, requirement table (`match_explain.md`), top evidence hits. Optionally re-run:
 
 ```bash
 python -m compass_core.cli skill-gap --root content --job-id <id>
+python -m compass_core.cli match-explain --root content --job-id <id>
 ```
 
 ### `/resume`

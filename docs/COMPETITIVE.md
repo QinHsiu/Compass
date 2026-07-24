@@ -13,6 +13,7 @@ UX primary surface is **Compass Web**, not Gradio. v0.6 focuses on **config onbo
 |:---------------|:--------|
 | Evidence gate | Claims need `evidence_id` |
 | Skill-gap preflight | JD skills → `existing` / `supported_by_evidence` / `gap`; never inject gap into resume |
+| Requirement matrix | Per JD line `direct` / `partial` / `gap` + recommendation band |
 | Gap compass 4Q | Evidence / Narrative / Skill / Process |
 | Multi-form | **Compass Web** + optional Gradio + Skill + CLI + MCP |
 | Local-first | Data under `content/` |
@@ -30,6 +31,19 @@ Upstream: [santifer/career-ops](https://github.com/santifer/career-ops) (`jd-ski
 | CLI: `node jd-skill-gap.mjs` | `python -m compass_core.cli skill-gap` |
 
 **Deferred** (later rounds): A–G LLM rubric, posting legitimacy / liveness, golden eval harness, tracker CRM analytics.
+
+## Learned from job-resume-tailor (Round 2)
+
+Upstream: [liheyuting/job-resume-tailor](https://github.com/liheyuting/job-resume-tailor) (prompt-only match tables).
+
+| job-resume-tailor | Compass adaptation (v0.7.3) |
+|:------------------|:----------------------------|
+| Per-line Strong/Partial/Weak + resume cite | `requirement_matrix[]` with `direct` / `partial` / `gap` + `evidence_ids` |
+| Apply/skip bands + confidence | `match_explain.recommendation` + `confidence` + `matrix_score` |
+| Gap fatal/material/manageable | `severity` on hard rows → diagnose P0 |
+| Score-gated STAR depth | Interview STAR stubs mapped to hard rows with evidence |
+
+Human table: `content/jobs/{id}/match_explain.md`. CLI: `match-explain --job-id`.
 
 ## Out of scope (intentional)
 

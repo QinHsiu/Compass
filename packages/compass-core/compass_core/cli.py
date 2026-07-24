@@ -120,6 +120,49 @@ def cmd_skill_gap(args) -> int:
     return 0
 
 
+def cmd_match_explain(args) -> int:
+    """Rebuild requirement matrix + match_explain.md for an existing job."""
+    from .match_explain import (
+        build_requirement_matrix,
+        render_match_explain_md,
+        summarize_matrix,
+    )
+
+    root = _root(args)
+    job_dir = root / "jobs" / args.job_id
+    jd_path = job_dir / "jd.json"
+    if not jd_path.is_file():
+        print(json.dumps({"error": f"missing {jd_path}"}, ensure_ascii=False))
+        return 1
+    jd_data = json.loads(jd_path.read_text(encoding="utf-8"))
+    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
+    evidence = load_evidence(root)
+    rows = build_requirement_matrix(jd, evidence)
+    summary = summarize_matrix(rows, evidence_count=len(evidence))
+    match_path = job_dir / "match.json"
+    if match_path.is_file():
+        match_data = json.loads(match_path.read_text(encoding="utf-8"))
+        match_data["requirement_matrix"] = [r.to_dict() for r in rows]
+        match_data["match_explain"] = summary
+        match_path.write_text(json.dumps(match_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    (job_dir / "match_explain.md").write_text(
+        render_match_explain_md(jd, rows, summary), encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {
+                "job_id": args.job_id,
+                "match_explain": summary,
+                "rows": len(rows),
+                "path": str(job_dir / "match_explain.md"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
 def cmd_discover(args) -> int:
     root = _root(args)
     if args.source == "paste":
@@ -467,6 +510,14 @@ def build_parser() -> argparse.ArgumentParser:
     sg.add_argument("--jd-file", default=None)
     sg.add_argument("--text", default=None)
     sg.set_defaults(func=cmd_skill_gap)
+
+    mx = sub.add_parser(
+        "match-explain",
+        parents=[parent],
+        help="rebuild JD requirement matrix (direct/partial/gap) + match_explain.md",
+    )
+    mx.add_argument("--job-id", required=True)
+    mx.set_defaults(func=cmd_match_explain)
 
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
     d.add_argument("--source", choices=("paste", "rss", "career"), required=True)
