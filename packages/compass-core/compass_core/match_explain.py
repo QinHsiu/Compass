@@ -187,6 +187,7 @@ def render_match_explain_md(
     jd: ParsedJD,
     rows: list[RequirementRow],
     summary: dict,
+    profile_fit: dict | None = None,
 ) -> str:
     def table(kind: str, title: str) -> str:
         subset = [r for r in rows if r.kind == kind]
@@ -209,12 +210,29 @@ def render_match_explain_md(
     band = summary.get("recommendation", "?")
     conf = summary.get("confidence", "?")
     ms = summary.get("matrix_score", 0)
+    pf = profile_fit or {}
+    pf_block = ""
+    if pf:
+        pf_block = (
+            f"\n## Profile fit\n\n"
+            f"**status**: `{pf.get('status', 'pass')}`\n\n"
+            + (
+                "\n".join(f"- blocker: {b}" for b in (pf.get("blockers") or []))
+                or "- blockers: —"
+            )
+            + "\n"
+            + (
+                "\n".join(f"- warning: {w}" for w in (pf.get("warnings") or []))
+                or "- warnings: —"
+            )
+            + "\n"
+        )
     return f"""# Match explain: {jd.title} @ {jd.company}
 
 **job_id**: `{jd.job_id}`  
 **recommendation**: `{band}` · **confidence**: `{conf}` · **matrix_score**: {ms}  
 **direct/partial/gap**: {summary.get('direct_count', 0)}/{summary.get('partial_count', 0)}/{summary.get('gap_count', 0)} · **fatal**: {summary.get('fatal_count', 0)}
-
+{pf_block}
 {table("responsibility", "Responsibilities")}
 {table("hard", "Hard requirements")}
 {table("nice", "Nice to have")}

@@ -14,6 +14,7 @@ from .match_explain import (
     render_match_explain_md,
     summarize_matrix,
 )
+from .profile_fit import apply_to_explain, assess_profile_fit
 from .skill_gap import classify_jd, profile_skill_list
 
 
@@ -34,6 +35,10 @@ def _empty_explain() -> dict:
     }
 
 
+def _empty_profile_fit() -> dict:
+    return {"status": "pass", "blockers": [], "warnings": []}
+
+
 @dataclass
 class MatchResult:
     job_id: str
@@ -48,13 +53,14 @@ class MatchResult:
     skill_gap: dict = field(default_factory=_empty_skill_gap)
     requirement_matrix: list[dict] = field(default_factory=list)
     match_explain: dict = field(default_factory=_empty_explain)
+    profile_fit: dict = field(default_factory=_empty_profile_fit)
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> "MatchResult":
-        """Load match.json; tolerate older files missing skill_gap / matrix."""
+        """Load match.json; tolerate older files missing skill_gap / matrix / profile_fit."""
         kwargs = {k: data[k] for k in cls.__dataclass_fields__ if k in data}
         if "skill_gap" not in kwargs or not isinstance(kwargs.get("skill_gap"), dict):
             kwargs["skill_gap"] = _empty_skill_gap()
@@ -75,6 +81,12 @@ class MatchResult:
             base = _empty_explain()
             base.update(kwargs["match_explain"])
             kwargs["match_explain"] = base
+        if "profile_fit" not in kwargs or not isinstance(kwargs.get("profile_fit"), dict):
+            kwargs["profile_fit"] = _empty_profile_fit()
+        else:
+            pf = _empty_profile_fit()
+            pf.update(kwargs["profile_fit"])
+            kwargs["profile_fit"] = pf
         return cls(**kwargs)
 
 
@@ -120,6 +132,8 @@ def match_jd(
     gap = classify_jd(jd, evidence, profile_skills=profile_skill_list(profile))
     rows = build_requirement_matrix(jd, evidence)
     explain = summarize_matrix(rows, evidence_count=len(evidence))
+    fit = assess_profile_fit(jd, profile)
+    explain = apply_to_explain(explain, fit)
 
     return MatchResult(
         job_id=jd.job_id,
@@ -134,6 +148,7 @@ def match_jd(
         skill_gap=gap.to_dict(),
         requirement_matrix=[r.to_dict() for r in rows],
         match_explain=explain,
+        profile_fit=fit,
     )
 
 
@@ -158,7 +173,7 @@ def match_and_save(root: Path, jd_text: str, job_id: str | None = None) -> Match
 
     rows = [RequirementRow(**r) for r in result.requirement_matrix]
     (job_dir / "match_explain.md").write_text(
-        render_match_explain_md(jd, rows, result.match_explain),
+        render_match_explain_md(jd, rows, result.match_explain, profile_fit=result.profile_fit),
         encoding="utf-8",
     )
     return result

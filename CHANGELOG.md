@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.7 — 2026-07-25
+
+- Core: **profile_fit** gate (prisma-ai Round 6) — locations / target_roles / avoid → `match.json.profile_fit`; can force recommendation `skip` or cap at `exploratory`
+- match_explain.md Profile fit section; track seed notes blockers
+
 ## 0.7.6 — 2026-07-25
 
 - Core: **retracted_claims** (CareerForge Round 5) — aggregate gate fails / hard gaps / skill gaps into interview pack “Do not claim”

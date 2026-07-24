@@ -133,6 +133,10 @@ def seed_from_match(root: Path, job_id: str, *, status: str = "wishlist") -> dic
     if existing and existing.get("note") and existing["note"] != note:
         note = f"{existing['note']} · {policy['note']}"
 
+    pf = match.get("profile_fit") or {}
+    if pf.get("status") == "block" and pf.get("blockers"):
+        note = f"{note} · profile_fit blocked: {'; '.join(pf['blockers'][:2])}"
+
     return upsert(
         root,
         job_id,

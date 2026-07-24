@@ -140,13 +140,23 @@ def cmd_match_explain(args) -> int:
     rows = build_requirement_matrix(jd, evidence)
     summary = summarize_matrix(rows, evidence_count=len(evidence))
     match_path = job_dir / "match.json"
+    profile_fit = {"status": "pass", "blockers": [], "warnings": []}
     if match_path.is_file():
         match_data = json.loads(match_path.read_text(encoding="utf-8"))
         match_data["requirement_matrix"] = [r.to_dict() for r in rows]
         match_data["match_explain"] = summary
+        # refresh profile_fit if possible
+        from .intake import load_profile
+        from .profile_fit import apply_to_explain, assess_profile_fit
+
+        fit = assess_profile_fit(jd, load_profile(root))
+        summary = apply_to_explain(summary, fit)
+        match_data["match_explain"] = summary
+        match_data["profile_fit"] = fit
+        profile_fit = fit
         match_path.write_text(json.dumps(match_data, ensure_ascii=False, indent=2), encoding="utf-8")
     (job_dir / "match_explain.md").write_text(
-        render_match_explain_md(jd, rows, summary), encoding="utf-8"
+        render_match_explain_md(jd, rows, summary, profile_fit=profile_fit), encoding="utf-8"
     )
     print(
         json.dumps(

@@ -75,6 +75,15 @@ Upstream: [rebecha1227-a11y/CareerForge](https://github.com/rebecha1227-a11y/Car
 | 识别风险点 / 弱项 | `retracted_claims[]` in pack + session “Do not claim” |
 | Sources | requirement gaps, skill_gap.gap, ats unverified/rejected, scorecard gate fails |
 
+## Learned from prisma-ai (Round 6)
+
+Upstream: [weicanie/prisma-ai](https://github.com/weicanie/prisma-ai) (jobSeekDestination memory in match chain).
+
+| prisma-ai | Compass adaptation (v0.7.7) |
+|:----------|:----------------------------|
+| Destination/city/role memory | `profile.locations` / `target_roles` / `constraints.avoid` |
+| Filter before apply | `profile_fit` status pass/warn/block → band override |
+
 ## Out of scope (intentional)
 
 | Item | Why |
