@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.7.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.7.7-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -16,7 +16,7 @@
 
 <br/>
 
-**Upload · Match · Patch · Interview · Diagnose**
+**Upload · Match · Patch · Interview · Diagnose · Track**
 
 <br/>
 
@@ -31,9 +31,9 @@
 <br/>
 
 [快速开始](#快速开始--quick-start) ·
-[Studio](#compass-studio) ·
 [能力](#核心能力) ·
 [命令](#slash--cli) ·
+[竞品学习](docs/COMPETITIVE.md) ·
 [迭代](docs/ITERATION.md) ·
 [合规](docs/COMPLIANCE.md)
 
@@ -70,6 +70,7 @@ python -m compass_core.cli web --root content --port 8766
 HF Space：[README_SPACE.md](README_SPACE.md) · 传播文：[docs/launch_article_zh.md](docs/launch_article_zh.md) · [Good First Issues](docs/GOOD_FIRST_ISSUES.md) · [Star the repo](https://github.com/QinHsiu/Compass)
 
 依赖复现：见 [`requirements-lock.txt`](requirements-lock.txt)（如何 regenerate 见文件头注释）。
+
 ---
 
 ## Compass Web（主界面）
@@ -81,7 +82,7 @@ HF Space：[README_SPACE.md](README_SPACE.md) · 传播文：[docs/launch_articl
 | **职业探索** | 经历/文件 → 置信度分流 → 直接规划或 Holland RIASEC 测评 → 六维可视化与交互报告 → 一键进求职准备 |
 | 上传简历 | PDF / 图片 / 文本 → 证据草稿 |
 | 求职准备 | JD → 匹配 · 主题简历 · 面试包 · 诊断 · 图谱 |
-| 实时面试 | WebSocket 追问 + Web Speech + Monaco |
+| 实时面试 | WebSocket 追问 + 证据门禁 + scorecard 落盘 + Web Speech / Monaco |
 | 题库 | Token / 语义 RAG |
 | 证据图谱 | `/timeline` |
 
@@ -97,23 +98,31 @@ Gradio Studio 仍可用（可选）：`compass studio`。
 
 | 能力 | 说明 |
 |:-----|:-----|
-| **缺口罗盘** | 证据 / 叙事 / 技能 / 流程 + 做什么 / 证明物 / 耗时 |
 | **证据门禁** | 无 `evidence_id` 不写作成绩；可标 `UNVERIFIED` |
+| **技能缺口预检** | JD → `existing` / `supported_by_evidence` / `gap`；简历禁止注入 gap |
+| **需求证据矩阵** | 每条 JD 行 `direct` / `partial` / `gap` + 建议档（strong→skip） |
+| **画像约束** | `profile_fit`：地点 / 目标岗 / avoid → 可强制 skip |
+| **面试记分卡** | 五维 rubric 持久化 `scorecard.json`，同步 `session.md` |
+| **勿声称清单** | `retracted_claims`：硬缺口 / 门禁失败 → 面试风险点 |
+| **投递节奏** | match band → `follow_up_due` / `suggested_action`；`track --list-due` |
+| **缺口罗盘** | 证据 / 叙事 / 技能 / 流程 + 做什么 / 证明物 / 耗时 |
 | **12 主题模板** | JSON Resume 兼容 HTML/MD，[来源备注](packages/compass-core/compass_core/assets/templates/SOURCES.md) |
 | **LLM/Agent 题库** | 精选 + 公开源爬取，[来源备注](packages/compass-core/compass_core/assets/questions/SOURCES.md) |
 | **合规发现** | 粘贴 / RSS / career 页；默认不做平台自动投递 |
 
-闭环：`上传简历 → 岗位 → patch → 面试(文本/语音) → 诊断 → bridge`
+闭环：`上传 → 匹配(explain) → patch → 面试(scorecard) → 诊断 → track`
 
 ```mermaid
 flowchart LR
   upload[Upload PDF/Image] --> evidence[evidence/]
   evidence --> jd[Paste JD]
-  jd --> pipe[Match Resume Interview Diagnose]
-  pipe --> voice[Text or Oral ASR/TTS]
-  voice --> gap[Gap Compass]
-  gap --> bank[LLM Agent Bank]
+  jd --> match[Match + skill_gap + matrix + profile_fit]
+  match --> pipe[Resume Interview Diagnose]
+  pipe --> score[Scorecard / Retracted]
+  score --> track[Track cadence]
 ```
+
+竞品对照与本轮学习笔记：[docs/COMPETITIVE.md](docs/COMPETITIVE.md) · 变更记录：[CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -123,11 +132,12 @@ flowchart LR
 |:------|:----|:-----|
 | `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
-| `/evidence` | `evidence-index` | 证据索引 |
-| `/discover` | `discover` | 岗位导入 |
-| `/resume` | `resume-patch` | 主题 patch |
-| `/interview` | `interview-pack` | 面试包 |
-| `/diagnose` | `diagnose` | 缺口罗盘 |
+| `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
+| `/discover` | `discover` · `skill-gap` · `match-explain` | 岗位导入 · 技能三态 · 需求矩阵 |
+| `/resume` | `resume-patch` | 主题 patch（不注入 gap 技能） |
+| `/interview` | `interview-pack` · `scorecard …` | 面试包 · 五维记分 |
+| `/diagnose` | `diagnose` | 缺口罗盘（自动 seed track） |
+| `/track` | `track --seed-from-match` / `--list-due` | 投递看板 · 跟进日 |
 | `/desk` | `desk` | 轻量看板 |
 | — | `web` / `live` | **Web 主界面** |
 | — | `studio` | Gradio（可选） |
@@ -135,18 +145,29 @@ flowchart LR
 
 完整 Skill：[skill/SKILL.md](skill/SKILL.md)
 
+```bash
+# 典型最短路径
+python -m compass_core.cli discover --root content --source paste --text-file jd.txt
+python -m compass_core.cli match-explain --root content --job-id <id>
+python -m compass_core.cli resume-patch --root content --job-id <id>
+python -m compass_core.cli interview-pack --root content --job-id <id>
+python -m compass_core.cli diagnose --root content --job-id <id>
+python -m compass_core.cli track --root content --list-due
+```
+
 ---
 
 ## 仓库结构
 
 ```
-apps/studio/       # Gradio 交互（主 UI）
-apps/desk/         # 轻量 HTTP 看板
-packages/          # compass-core · compass-mcp
-skill/             # Cursor Skill
-collectors/        # 合规采集 + 快照
-content/           # 本地产物
-docs/              # 合规 · 竞品 · 迭代计划
+apps/interview-live/   # Web 主界面（WebSocket）
+apps/studio/           # Gradio（可选）
+apps/desk/             # 轻量 HTTP 看板
+packages/              # compass-core · compass-mcp
+skill/                 # Cursor Skill
+collectors/            # 合规采集 + 快照
+content/               # 本地产物（默认 gitignore PII）
+docs/                  # 合规 · 竞品 · 迭代计划
 ```
 
 ---
@@ -154,7 +175,7 @@ docs/              # 合规 · 竞品 · 迭代计划
 ## 合规 / Compliance
 
 - 题库爬取仅限**公开 raw/文档**；拒绝登录招聘站深度抓取。
-- 简历文件仅存本地 `content/`，默认不上云。
+- 简历 / 证据 / 画像仅存本地 `content/`，默认不上云、不提交真实经历。
 - 详见 [docs/COMPLIANCE.md](docs/COMPLIANCE.md)。
 
 ---
