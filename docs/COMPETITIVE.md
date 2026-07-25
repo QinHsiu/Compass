@@ -194,6 +194,18 @@ New analysis still labeled ATS/Offer/calibrate as “blank”; v0.8 already had 
 | Story Vault | SQLite + tags + `storybank recommend` |
 | Mentor PDF | `export-report --mentor` |
 
+## Learned from compas.txt matrix refresh (v0.10.0)
+
+Latest matrix still marked scout/grade/story/calibrate as missing — those shipped in v0.8–0.9. True gaps closed here:
+
+| Item | Adaptation |
+|:-----|:-----------|
+| `batch --jobs urls.txt` | parallel URL/board-spec match |
+| Contact mining | `research` local checklist (no LinkedIn) |
+| Root-cause coaching | `scorecard roots` / aggregate.root_causes |
+| Big-tech packs | `company_packs.jsonl` + `--company` |
+| Observability | `obs status\|tail` + audit.jsonl |
+
 ## Out of scope (intentional)
 
 | Item | Why |

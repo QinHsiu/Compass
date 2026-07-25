@@ -69,6 +69,10 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
     if not stories:
         stories = top_stories(root, limit=5, skills=jd.keywords)
 
+    from .company_pack import search_company_pack
+
+    company_pack_hits = search_company_pack(jd.company, title=jd.title, limit=6)
+
     pack = {
         "job_id": job_id,
         "title": jd.title,
@@ -87,6 +91,7 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "bank_deduped": True,
         "stories": stories,
         "grade": match.grade,
+        "company_pack_hits": company_pack_hits,
     }
     from .retracted import collect_retracted_claims
 
@@ -183,6 +188,11 @@ def render_session(pack: dict) -> str:
         )
     stories_block = "\n".join(story_lines) or "- _(run `storybank rebuild`)_"
 
+    pack_q = []
+    for h in (pack.get("company_pack_hits") or [])[:5]:
+        pack_q.append(f"- `{h.get('id')}` {h.get('q')}")
+    company_block = "\n".join(pack_q) or "- _(no company pack match)_"
+
     return f"""# Interview session: {pack['title']} @ {pack['company']}
 
 **job_id**: `{pack['job_id']}`{band}
@@ -193,6 +203,10 @@ def render_session(pack: dict) -> str:
 ## Storybank (top)
 
 {stories_block}
+
+## Company pack
+
+{company_block}
 
 ## Questions
 

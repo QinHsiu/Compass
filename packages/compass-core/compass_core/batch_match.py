@@ -25,7 +25,9 @@ def _row_from_match(m: MatchResult) -> dict:
         "matrix_score": (m.match_explain or {}).get("matrix_score"),
         "recommendation": (m.match_explain or {}).get("recommendation"),
         "letter": g.get("letter"),
+        "score_100": g.get("score_100"),
         "global_1_5": g.get("global_1_5"),
+        "display": g.get("display"),
         "verdict": g.get("verdict"),
     }
 
@@ -102,13 +104,127 @@ def save_batch(root: Path, rows: list[dict], *, label: str = "batch") -> dict:
         "",
         f"count={len(rows)}",
         "",
-        "| letter | global | score | recommendation | title | company | job_id |",
-        "|--------|--------|-------|----------------|-------|---------|--------|",
+        "| letter | score_100 | score | recommendation | title | company | job_id |",
+        "|--------|-----------|-------|----------------|-------|---------|--------|",
     ]
     for r in rows:
         lines.append(
-            f"| {r.get('letter') or '—'} | {r.get('global_1_5') or '—'} | {r.get('score')} | "
+            f"| {r.get('letter') or '—'} | {r.get('score_100') or '—'} | {r.get('score')} | "
             f"{r.get('recommendation') or '—'} | {r.get('title')} | {r.get('company')} | `{r.get('job_id')}` |"
         )
     (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return summary
+
+
+def _read_job_lines(path: Path) -> list[str]:
+    lines = []
+    for ln in path.read_text(encoding="utf-8").splitlines():
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        lines.append(s)
+    return lines
+
+
+def _process_url_or_spec(root: Path, item: str, *, fetch_fn=None) -> dict:
+    """Match one URL, board spec, or raw JD path."""
+    from .ats_scan import parse_board_spec, scan_board
+    from .collectors import fetch_url
+
+    item = item.strip()
+    # local file with JD text
+    p = Path(item)
+    if p.is_file():
+        m = match_and_save(root, p.read_text(encoding="utf-8"))
+        row = _row_from_match(m)
+        row["source"] = str(p)
+        return row
+
+    # board spec greenhouse:slug
+    if ":" in item and not item.startswith("http"):
+        try:
+            parse_board_spec(item)
+            jobs = scan_board(item, limit=3, fetch_fn=fetch_fn)
+            if not jobs:
+                return {"error": f"empty board {item}", "source": item}
+            m = match_and_save(root, jobs[0]["text"])
+            row = _row_from_match(m)
+            row["source"] = item
+            return row
+        except ValueError:
+            pass
+
+    # ATS / career URL
+    if item.startswith("http"):
+        try:
+            # try as board URL first
+            try:
+                ats, slug = parse_board_spec(item)
+                jobs = scan_board(f"{ats}:{slug}", limit=5, fetch_fn=fetch_fn)
+                # Prefer exact job URL match if present
+                hit = next((j for j in jobs if j.get("url") and j["url"].rstrip("/") in item.rstrip("/")), None)
+                if not hit and jobs:
+                    # single-job greenhouse URL often contains /jobs/ID
+                    hit = jobs[0]
+                if hit:
+                    m = match_and_save(root, hit["text"])
+                    row = _row_from_match(m)
+                    row["source"] = item
+                    return row
+            except (ValueError, PermissionError, Exception):
+                pass
+            # fallback: fetch HTML page text
+            if fetch_fn is None:
+                html = fetch_url(item)
+            else:
+                html = str(fetch_fn(item))
+            from bs4 import BeautifulSoup
+
+            text = BeautifulSoup(html, "lxml").get_text("\n", strip=True)[:8000]
+            body = f"链接：{item}\n\n{text}"
+            m = match_and_save(root, body)
+            row = _row_from_match(m)
+            row["source"] = item
+            return row
+        except Exception as e:
+            return {"error": str(e), "source": item}
+
+    # treat as pasted JD snippet
+    m = match_and_save(root, item)
+    row = _row_from_match(m)
+    row["source"] = "text"
+    return row
+
+
+def batch_from_jobs_file(
+    root: Path,
+    jobs_file: str | Path,
+    *,
+    workers: int = 5,
+    fetch_fn=None,
+) -> list[dict]:
+    """Parallel evaluate URLs / board specs listed in a text file (compas v0.10)."""
+    root = Path(root)
+    path = Path(jobs_file)
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    items = _read_job_lines(path)
+    workers = max(1, min(int(workers or 5), 10))
+    rows: list[dict] = []
+
+    def _one(it: str) -> dict:
+        return _process_url_or_spec(root, it, fetch_fn=fetch_fn)
+
+    if workers == 1 or len(items) <= 1:
+        for it in items:
+            rows.append(_one(it))
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futs = [ex.submit(_one, it) for it in items]
+            for fut in as_completed(futs):
+                rows.append(fut.result())
+    rows.sort(
+        key=lambda r: float(r.get("score_100") or r.get("global_1_5") or r.get("score") or 0),
+        reverse=True,
+    )
+    return rows

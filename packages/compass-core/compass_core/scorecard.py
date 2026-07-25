@@ -143,6 +143,9 @@ def aggregate(data: dict, matrix: list[dict] | None = None) -> dict:
         "requirement_coverage": cov,
         "answer_count": len(answers),
     }
+    from .root_cause import attach_root_causes
+
+    data["aggregate"] = attach_root_causes(data["aggregate"])
     return data
 
 
@@ -302,6 +305,15 @@ def sync_session_md(root: Path, job_id: str, data: dict | None = None) -> Path |
 | Communication | {agg.get('relevance', '—')} | relevance | {eids} |
 | JD fit | {agg.get('jd_fit', '—')} | credibility={agg.get('credibility', '—')} · gate_pass={rate} | {eids} |
 """
+    roots = (data.get("aggregate") or {}).get("root_causes") or []
+    if roots:
+        table += "\n### Root causes\n\n"
+        for r in roots:
+            table += (
+                f"- **{r.get('label_zh')}** (`{r.get('root_cause')}`) "
+                f"← {r.get('dimension')}={r.get('score')}: {r.get('fix')}\n"
+            )
+        table += "\n"
     text = session.read_text(encoding="utf-8")
     if "## Scorecard" in text:
         text = re.sub(

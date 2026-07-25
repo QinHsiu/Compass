@@ -1,0 +1,12 @@
+{"id": "cp_bytedance_1", "company": ["bytedance", "字节", "抖音"], "q": "讲一次你推动跨团队对齐的项目，如何处理优先级冲突？", "topics": ["leadership", "conflict"], "level": "mid"}
+{"id": "cp_bytedance_2", "company": ["bytedance", "字节", "抖音"], "q": "如果线上核心指标突然下跌 20%，你前 30 分钟怎么做？", "topics": ["incident", "ownership"], "level": "mid"}
+{"id": "cp_tencent_1", "company": ["tencent", "腾讯"], "q": "描述你做过的性能优化：基线、手段、复盘指标。", "topics": ["perf", "metrics"], "level": "mid"}
+{"id": "cp_tencent_2", "company": ["tencent", "腾讯"], "q": "如何在业务压力下保证代码质量与交付节奏？", "topics": ["process"], "level": "senior"}
+{"id": "cp_alibaba_1", "company": ["alibaba", "阿里", "阿里巴巴", "淘宝"], "q": "大促/高峰场景下你如何做容量与降级设计？", "topics": ["scale", "sre"], "level": "senior"}
+{"id": "cp_alibaba_2", "company": ["alibaba", "阿里", "阿里巴巴"], "q": "讲一个数据一致性或事务相关的真实案例。", "topics": ["data"], "level": "mid"}
+{"id": "cp_google_1", "company": ["google", "谷歌"], "q": "Design a URL shortener; discuss trade-offs and failure modes.", "topics": ["system-design"], "level": "mid"}
+{"id": "cp_google_2", "company": ["google", "谷歌"], "q": "Tell me about a time you disagreed with a technical decision.", "topics": ["conflict"], "level": "mid"}
+{"id": "cp_meta_1", "company": ["meta", "facebook", "脸书"], "q": "Walk through a project with measurable impact at scale.", "topics": ["impact", "scale"], "level": "mid"}
+{"id": "cp_meta_2", "company": ["meta", "facebook"], "q": "How do you validate an ML/ranking change without harming users?", "topics": ["ml", "experiment"], "level": "senior"}
+{"id": "cp_amazon_1", "company": ["amazon", "亚马逊", "aws"], "q": "Give an example of Customer Obsession from your work.", "topics": ["leadership"], "level": "mid"}
+{"id": "cp_amazon_2", "company": ["amazon", "亚马逊"], "q": "Describe a time you had to dive deep into ambiguous data.", "topics": ["ownership"], "level": "mid"}

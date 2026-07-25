@@ -1,10 +1,10 @@
 # compass-core
 
-Library + CLI for Compass (v0.9.0+):
+Library + CLI for Compass (v0.10.0+):
 
-- **scout** keyword/location ATS discover · evidence index · skill_gap · matrix · **grade score_100 parts** · profile_fit · liveness
-- Evidence gate · resume patch/import/lint · interview · scorecard · **story_vault** · transcript · persona
-- Diagnose · **calibrate narrative_hits** · batch-match · practice center · **offer market_p50** · negotiate · **mentor export** · track · desk
+- **scout** / **batch --jobs** · grade score_100 · matrix · profile_fit · liveness
+- resume import/patch · interview · scorecard **roots** · **company packs** · story_vault · transcript
+- diagnose · calibrate · **research** · offer · negotiate · **obs** audit/metrics · mentor export · track
 
 ```bash
 python -m compass_core.cli --help

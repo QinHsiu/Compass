@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.9.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.10.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -133,11 +133,11 @@ flowchart LR
 | `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
-| `/discover` | `discover` · `scout` · `skill-gap` · `match-explain` · `grade` · `batch-match` | ATS/关键词发现 · 技能三态 · 矩阵 · 百分制评分 · 批量 |
+| `/discover` | `discover` · `scout` · `batch --jobs` · `skill-gap` · `grade` | ATS/关键词/URL 批处理 · 评分 |
 | `/resume` | `resume-patch` · `resume-metrics` · `resume-import` | 主题 patch · 密度/指标 · PDF 导入 |
-| `/interview` | `interview-pack` · `scorecard` · `storybank` · `transcript-import` · `practice-stats` | 面试包 · 记分 · 故事库/Vault · 转录 · 报告中心 |
-| `/diagnose` | `diagnose` · `export-report --mentor` | 缺口罗盘 · 校准摘要 · 导师 PDF |
-| `/track` | `track` · `offer` · `negotiate` · `calibrate` | 投递看板 · Offer 六维/P50 · 谈判 · 结果校准 |
+| `/interview` | `interview-pack` · `scorecard` · `questions --company` · `storybank` · `transcript-import` | 面试包 · 根因 · 大厂题包 · 故事库 |
+| `/diagnose` | `diagnose` · `export-report --mentor` · `research` · `calibrate` | 缺口罗盘 · 公司研究 · 校准 |
+| `/track` | `track` · `offer` · `negotiate` · `obs` | 投递 · Offer · 谈判 · 本地可观测 |
 | `/desk` | `desk` | 轻量看板 |
 | — | `web` / `live` | **Web 主界面** |
 | — | `studio` | Gradio（可选） |

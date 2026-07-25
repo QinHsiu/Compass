@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0 — 2026-07-25
+
+compas.txt matrix shortfall patch (analysis was stale vs v0.9):
+
+- **batch --jobs urls.txt**: parallel URL/board-spec evaluate (workers 5–10); alias of batch-match
+- **research**: company brief + contact checklist (no LinkedIn scrape)
+- **scorecard roots**: five-dim → root_causes (narrative_hoarding / evidence_gap / …)
+- **company packs**: `assets/questions/company_packs.jsonl` + `questions --company` + pack inject
+- **obs**: local `logs/audit.jsonl` + `metrics.json`; `obs status|tail`
+
 ## 0.9.0 — 2026-07-25
 
 compas.txt refresh — closed-loop automation + quantified outcomes (on top of v0.8.0):

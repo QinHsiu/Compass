@@ -256,6 +256,7 @@ def cmd_grade(args) -> int:
 
 
 def cmd_scout(args) -> int:
+    from .observability import audit_event
     from .scout import scout
 
     root = _root(args)
@@ -272,6 +273,7 @@ def cmd_scout(args) -> int:
     except Exception as e:
         print(json.dumps({"error": str(e)}, ensure_ascii=False))
         return 1
+    audit_event(root, "scout", count=summary.get("count"), keyword=args.keyword)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
@@ -285,21 +287,60 @@ def cmd_resume_import(args) -> int:
 
 
 def cmd_batch_match(args) -> int:
-    from .batch_match import batch_from_ats, match_existing_jobs, save_batch
+    from .batch_match import batch_from_ats, batch_from_jobs_file, match_existing_jobs, save_batch
+    from .observability import audit_event
 
     root = _root(args)
-    if args.from_ats:
+    if getattr(args, "jobs", None):
+        rows = batch_from_jobs_file(root, args.jobs, workers=getattr(args, "workers", 5) or 5)
+        label = "url"
+    elif args.from_ats:
         rows = batch_from_ats(root, args.from_ats, limit=args.limit)
         label = "ats"
     elif args.all_jobs:
         rows = match_existing_jobs(root, workers=args.workers)
         label = "all"
     else:
-        print(json.dumps({"error": "need --all-jobs or --from-ats greenhouse:slug"}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"error": "need --jobs urls.txt or --all-jobs or --from-ats greenhouse:slug"},
+                ensure_ascii=False,
+            )
+        )
         return 1
     summary = save_batch(root, rows, label=label)
+    audit_event(root, "batch", count=len(rows), batch_id=summary.get("batch_id"), label=label)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
+
+
+def cmd_research(args) -> int:
+    from .company_research import build_research
+    from .observability import audit_event
+
+    root = _root(args)
+    if not args.company and not args.job_id:
+        print(json.dumps({"error": "need --company or --job-id"}, ensure_ascii=False))
+        return 1
+    out = build_research(root, company=args.company, job_id=args.job_id)
+    audit_event(root, "research", company=out.get("company"), job_id=args.job_id)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_obs(args) -> int:
+    from .observability import status, tail_audit
+
+    root = _root(args)
+    action = args.obs_action
+    if action == "status":
+        print(json.dumps(status(root), ensure_ascii=False, indent=2))
+        return 0
+    if action == "tail":
+        print(json.dumps(tail_audit(root, n=args.n or 20), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
 
 
 def cmd_storybank(args) -> int:
@@ -434,6 +475,13 @@ def cmd_questions(args) -> int:
     from .questions import infer_topics, load_bank, search_questions
 
     root = _root(args)
+    company = getattr(args, "company", None)
+    if company:
+        from .company_pack import search_company_pack
+
+        hits = search_company_pack(company, limit=args.limit)
+        print(json.dumps({"backend": "company_pack", "hits": hits}, ensure_ascii=False, indent=2))
+        return 0
     kws = [k.strip() for k in (args.keywords or "").split(",") if k.strip()]
     topics = infer_topics(kws) if kws else None
     query = args.query or " ".join(kws)
@@ -558,6 +606,12 @@ def cmd_export_report(args) -> int:
 
 def cmd_interview(args) -> int:
     out = interview_and_save(_root(args), args.job_id)
+    try:
+        from .observability import audit_event
+
+        audit_event(_root(args), "interview", job_id=args.job_id, bank_n=out.get("bank_n"))
+    except Exception:
+        pass
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
@@ -604,6 +658,14 @@ def cmd_scorecard(args) -> int:
     if action == "show":
         print(json.dumps(load_scorecard(root, job_id), ensure_ascii=False, indent=2))
         return 0
+    if action == "roots":
+        from .root_cause import diagnose_root_causes
+
+        sc = load_scorecard(root, job_id)
+        agg = sc.get("aggregate") or {}
+        roots = agg.get("root_causes") or diagnose_root_causes(agg.get("scores") or {})
+        print(json.dumps({"job_id": job_id, "root_causes": roots, "scores": agg.get("scores")}, ensure_ascii=False, indent=2))
+        return 0
     if action == "sync":
         path = sync_session_md(root, job_id)
         print(json.dumps({"synced": str(path) if path else None}, ensure_ascii=False))
@@ -630,6 +692,12 @@ def cmd_scorecard(args) -> int:
             requirement_ids=reqs,
             notes=args.note or "",
         )
+        try:
+            from .observability import audit_event
+
+            audit_event(root, "scorecard_record", job_id=job_id, turn=args.turn)
+        except Exception:
+            pass
         print(json.dumps({"aggregate": data.get("aggregate"), "answers": len(data.get("answers") or [])}, ensure_ascii=False, indent=2))
         return 0
     print(json.dumps({"error": f"unknown scorecard action {action}"}, ensure_ascii=False))
@@ -652,6 +720,12 @@ def cmd_diagnose(args) -> int:
         from .calibrate import calibrate_summary_for_job
 
         out["calibrate"] = calibrate_summary_for_job(root, job_id)
+    try:
+        from .observability import audit_event
+
+        audit_event(root, "diagnose", job_id=job_id, actions=out.get("actions"))
+    except Exception:
+        pass
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
@@ -880,12 +954,34 @@ def build_parser() -> argparse.ArgumentParser:
     ri.add_argument("--job-id", default=None)
     ri.set_defaults(func=cmd_resume_import)
 
-    bm = sub.add_parser("batch-match", parents=[parent], help="batch match jobs / ATS board")
+    bm = sub.add_parser("batch-match", parents=[parent], help="batch match jobs / ATS board / urls file")
     bm.add_argument("--all-jobs", action="store_true")
     bm.add_argument("--from-ats", default=None, help="greenhouse:slug")
+    bm.add_argument("--jobs", default=None, help="text file: one URL or greenhouse:slug per line")
     bm.add_argument("--limit", type=int, default=10)
-    bm.add_argument("--workers", type=int, default=2)
+    bm.add_argument("--workers", type=int, default=5)
     bm.set_defaults(func=cmd_batch_match)
+
+    bat = sub.add_parser("batch", parents=[parent], help="alias: batch --jobs urls.txt (parallel)")
+    bat.add_argument("--jobs", required=True, help="urls.txt / board specs")
+    bat.add_argument("--workers", type=int, default=5)
+    bat.add_argument("--all-jobs", action="store_true")
+    bat.add_argument("--from-ats", default=None)
+    bat.add_argument("--limit", type=int, default=10)
+    bat.set_defaults(func=cmd_batch_match)
+
+    res = sub.add_parser("research", parents=[parent], help="company research + contact checklist")
+    res.add_argument("--company", default=None)
+    res.add_argument("--job-id", default=None)
+    res.set_defaults(func=cmd_research)
+
+    ob = sub.add_parser("obs", parents=[parent], help="local audit/metrics observability")
+    ob_sub = ob.add_subparsers(dest="obs_action", required=True)
+    ob_st = ob_sub.add_parser("status")
+    ob_st.set_defaults(func=cmd_obs)
+    ob_t = ob_sub.add_parser("tail")
+    ob_t.add_argument("-n", type=int, default=20)
+    ob_t.set_defaults(func=cmd_obs)
 
     sb = sub.add_parser("storybank", parents=[parent], help="STAR storybank from evidence")
     sb_sub = sb.add_subparsers(dest="storybank_action", required=True)
@@ -954,6 +1050,7 @@ def build_parser() -> argparse.ArgumentParser:
     qb = sub.add_parser("questions", parents=[parent], help="search interview question bank")
     qb.add_argument("--query", default="")
     qb.add_argument("--keywords", default="")
+    qb.add_argument("--company", default=None, help="company pack e.g. bytedance / 字节")
     qb.add_argument("--limit", type=int, default=12)
     qb.add_argument("--semantic", action="store_true", help="use Chroma RAG when available")
     qb.add_argument("--lang", default="zh", help="ui language for bilingual bank hits (zh/en/ja/es)")
@@ -1018,6 +1115,9 @@ def build_parser() -> argparse.ArgumentParser:
     sc_show = sc_sub.add_parser("show", help="print scorecard.json")
     sc_show.add_argument("--job-id", required=True)
     sc_show.set_defaults(func=cmd_scorecard)
+    sc_roots = sc_sub.add_parser("roots", help="five-dim root-cause diagnosis")
+    sc_roots.add_argument("--job-id", required=True)
+    sc_roots.set_defaults(func=cmd_scorecard)
     sc_sync = sc_sub.add_parser("sync", help="fill session.md Scorecard from aggregate")
     sc_sync.add_argument("--job-id", required=True)
     sc_sync.set_defaults(func=cmd_scorecard)
