@@ -121,55 +121,25 @@ def cmd_skill_gap(args) -> int:
 
 
 def cmd_match_explain(args) -> int:
-    """Rebuild requirement matrix + match_explain.md for an existing job."""
-    from .match_explain import (
-        build_requirement_matrix,
-        render_match_explain_md,
-        summarize_matrix,
-    )
+    """Rebuild requirement matrix + match_explain.md (supports --job-ids + --workers)."""
+    from .parallel_jobs import match_explain_many, rebuild_match_explain
 
     root = _root(args)
-    job_dir = root / "jobs" / args.job_id
-    jd_path = job_dir / "jd.json"
-    if not jd_path.is_file():
-        print(json.dumps({"error": f"missing {jd_path}"}, ensure_ascii=False))
+    ids = []
+    if getattr(args, "job_ids", None):
+        ids = [x.strip() for x in args.job_ids.split(",") if x.strip()]
+    elif getattr(args, "job_id", None):
+        ids = [args.job_id]
+    if not ids:
+        print(json.dumps({"error": "need --job-id or --job-ids"}, ensure_ascii=False))
         return 1
-    jd_data = json.loads(jd_path.read_text(encoding="utf-8"))
-    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
-    evidence = load_evidence(root)
-    rows = build_requirement_matrix(jd, evidence)
-    summary = summarize_matrix(rows, evidence_count=len(evidence))
-    match_path = job_dir / "match.json"
-    profile_fit = {"status": "pass", "blockers": [], "warnings": []}
-    if match_path.is_file():
-        match_data = json.loads(match_path.read_text(encoding="utf-8"))
-        match_data["requirement_matrix"] = [r.to_dict() for r in rows]
-        match_data["match_explain"] = summary
-        # refresh profile_fit if possible
-        from .intake import load_profile
-        from .profile_fit import apply_to_explain, assess_profile_fit
-
-        fit = assess_profile_fit(jd, load_profile(root))
-        summary = apply_to_explain(summary, fit)
-        match_data["match_explain"] = summary
-        match_data["profile_fit"] = fit
-        profile_fit = fit
-        match_path.write_text(json.dumps(match_data, ensure_ascii=False, indent=2), encoding="utf-8")
-    (job_dir / "match_explain.md").write_text(
-        render_match_explain_md(jd, rows, summary, profile_fit=profile_fit), encoding="utf-8"
-    )
-    print(
-        json.dumps(
-            {
-                "job_id": args.job_id,
-                "match_explain": summary,
-                "rows": len(rows),
-                "path": str(job_dir / "match_explain.md"),
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    workers = int(getattr(args, "workers", 1) or 1)
+    if len(ids) == 1 and workers <= 1:
+        out = rebuild_match_explain(root, ids[0])
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0 if not out.get("error") else 1
+    out = match_explain_many(root, ids, workers=workers)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -415,8 +385,25 @@ def cmd_batch_match(args) -> int:
         return 0
     with span(root, "batch"):
         if getattr(args, "jobs", None):
-            rows = batch_from_jobs_file(root, args.jobs, workers=getattr(args, "workers", 5) or 5)
-            label = "url"
+            rows = batch_from_jobs_file(
+                root,
+                args.jobs,
+                workers=getattr(args, "workers", 5) or 5,
+                resume=getattr(args, "resume", None),
+                progress=not getattr(args, "quiet", False),
+            )
+            # already checkpointed + summary.json written
+            bid = (rows[0].get("_batch_id") if rows else None) or "url"
+            summary = {
+                "batch_id": bid,
+                "count": len(rows),
+                "jobs": [{k: v for k, v in r.items() if not str(k).startswith("_")} for r in rows],
+                "resumed": bool(getattr(args, "resume", None)),
+                "path": str(root / "batches" / bid / "summary.json"),
+            }
+            audit_event(root, "batch", count=len(rows), batch_id=bid, label="url")
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return 0
         elif getattr(args, "from_ats", None):
             rows = batch_from_ats(root, args.from_ats, limit=args.limit)
             label = "ats"
@@ -493,26 +480,56 @@ def cmd_anki(args) -> int:
 
 
 def cmd_experience(args) -> int:
-    from .experience_bank import complete_experience, search_experience
+    from .experience_bank import complete_experience, import_experiences, search_experience
 
     action = getattr(args, "experience_action", "search")
+    root = _root(args)
+    if action == "import":
+        path = getattr(args, "file", None)
+        if not path:
+            print(json.dumps({"error": "need --file jsonl"}, ensure_ascii=False))
+            return 1
+        out = import_experiences(root, path)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
     if action == "complete":
         hits = complete_experience(
-            query=getattr(args, "query", None),
+            getattr(args, "query", None),
             company=getattr(args, "company", None),
             topic=getattr(args, "topic", None),
             limit=getattr(args, "limit", 10) or 10,
             id=getattr(args, "id", None),
+            root=root,
         )
         print(json.dumps(hits, ensure_ascii=False, indent=2))
         return 0
     hits = search_experience(
-        query=getattr(args, "query", None),
+        getattr(args, "query", None),
         company=getattr(args, "company", None),
         topic=getattr(args, "topic", None),
         limit=getattr(args, "limit", 10) or 10,
+        root=root,
     )
     print(json.dumps(hits, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_tutorial(args) -> int:
+    from .tutorial import run_tutorial
+
+    out = run_tutorial(_root(args), step=getattr(args, "step", None))
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_report_summary(args) -> int:
+    from .practice_stats import export_practice_center, practice_rollup
+
+    root = _root(args)
+    if getattr(args, "json_only", False):
+        print(json.dumps(practice_rollup(root), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps(export_practice_center(root), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -886,8 +903,24 @@ def cmd_calibrate(args) -> int:
 
 
 def cmd_resume(args) -> int:
-    out = apply_and_save(_root(args), args.job_id, theme=getattr(args, "theme", None))
-    print(json.dumps(out, ensure_ascii=False, indent=2))
+    root = _root(args)
+    ids = []
+    if getattr(args, "job_ids", None):
+        ids = [x.strip() for x in args.job_ids.split(",") if x.strip()]
+    elif getattr(args, "job_id", None):
+        ids = [args.job_id]
+    if not ids:
+        print(json.dumps({"error": "need --job-id or --job-ids"}, ensure_ascii=False))
+        return 1
+    workers = int(getattr(args, "workers", 1) or 1)
+    theme = getattr(args, "theme", None)
+    if len(ids) == 1 and workers <= 1:
+        out = apply_and_save(root, ids[0], theme=theme)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    from .parallel_jobs import resume_patch_many
+
+    print(json.dumps(resume_patch_many(root, ids, workers=workers, theme=theme), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -1331,7 +1364,9 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[parent],
         help="rebuild JD requirement matrix (direct/partial/gap) + match_explain.md",
     )
-    mx.add_argument("--job-id", required=True)
+    mx.add_argument("--job-id", default=None)
+    mx.add_argument("--job-ids", default=None, help="comma-separated job ids for parallel")
+    mx.add_argument("--workers", type=int, default=1)
     mx.set_defaults(func=cmd_match_explain)
 
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
@@ -1427,6 +1462,8 @@ def build_parser() -> argparse.ArgumentParser:
     bm.add_argument("--jobs", default=None, help="text file: one URL or greenhouse:slug per line")
     bm.add_argument("--limit", type=int, default=10)
     bm.add_argument("--workers", type=int, default=5)
+    bm.add_argument("--resume", default=None, help="resume batch_id")
+    bm.add_argument("--quiet", action="store_true")
     bm.set_defaults(func=cmd_batch_match)
 
     bat = sub.add_parser("batch", parents=[parent], help="batch --jobs | batch board")
@@ -1435,6 +1472,8 @@ def build_parser() -> argparse.ArgumentParser:
     bat.add_argument("--all-jobs", action="store_true")
     bat.add_argument("--from-ats", default=None)
     bat.add_argument("--limit", type=int, default=10)
+    bat.add_argument("--resume", default=None, help="resume batch_id (checkpoint.json)")
+    bat.add_argument("--quiet", action="store_true", help="hide progress lines")
     bat.set_defaults(func=cmd_batch_match)
     bat_sub = bat.add_subparsers(dest="batch_action", required=False)
     bat_board = bat_sub.add_parser("board", help="recent batch summaries table")
@@ -1484,6 +1523,17 @@ def build_parser() -> argparse.ArgumentParser:
     exp_c.add_argument("--id", default=None)
     exp_c.add_argument("--limit", type=int, default=10)
     exp_c.set_defaults(func=cmd_experience)
+    exp_i = exp_sub.add_parser("import", help="import user JSONL → content/experiences/")
+    exp_i.add_argument("--file", required=True)
+    exp_i.set_defaults(func=cmd_experience)
+
+    tut = sub.add_parser("tutorial", parents=[parent], help="first-loop onboarding steps")
+    tut.add_argument("--step", type=int, default=None, help="mark step N done after you run it")
+    tut.set_defaults(func=cmd_tutorial)
+
+    rs = sub.add_parser("report-summary", parents=[parent], help="practice center rollup (alias practice-stats --export)")
+    rs.add_argument("--json-only", action="store_true", help="raw rollup without markdown export")
+    rs.set_defaults(func=cmd_report_summary)
 
     tr = sub.add_parser("train", parents=[parent], help="8-stage progressive interview training")
     tr_sub = tr.add_subparsers(dest="train_action", required=True)
@@ -1659,7 +1709,9 @@ def build_parser() -> argparse.ArgumentParser:
     cal_rep.set_defaults(func=cmd_calibrate)
 
     r = sub.add_parser("resume-patch", parents=[parent], help="build evidence-gated resume patch")
-    r.add_argument("--job-id", required=True)
+    r.add_argument("--job-id", default=None)
+    r.add_argument("--job-ids", default=None, help="comma-separated for parallel")
+    r.add_argument("--workers", type=int, default=1)
     r.add_argument("--theme", default=None, help="template id (see templates command)")
     r.set_defaults(func=cmd_resume)
 

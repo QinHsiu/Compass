@@ -572,3 +572,67 @@ def test_fit_markdown_and_depth(root: Path):
     assert any(j.get("depth") == 1 or "feature store" in (j.get("text") or "").lower() for j in jobs) or any(
         j.get("title") for j in jobs
     )
+
+
+def test_answer_rubric_and_transcript(root: Path):
+    from compass_core.answer_rubric import score_qa_rubric
+    from compass_core.transcript import import_transcript
+
+    sc = score_qa_rubric(
+        "How did you cut p99 latency?",
+        "Situation: traffic spike. Action: added Redis cache. Result: p99 120ms → 40ms with evidence.",
+    )
+    assert sc["substance"] >= 3
+    assert sc["structure"] >= 3
+
+    text = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    transcript = (
+        "Interviewer: Tell me about a latency win.\n"
+        "Candidate: Situation: feature store hot path. Action: sharded Redis. "
+        "Result: p99 down 60% with metrics on Grafana.\n"
+    )
+    out = import_transcript(root, m.job_id, transcript, sync_scorecard=True)
+    assert out["detected_format"]
+    assert out["pairs"] >= 1
+    assert out.get("scorecard_answers", 0) >= 1
+
+
+def test_batch_checkpoint(root: Path, tmp_path: Path):
+    from compass_core.batch_match import batch_from_jobs_file
+
+    jd = (FIXTURE / "jd.txt").read_text(encoding="utf-8")
+    f1 = tmp_path / "a.txt"
+    f2 = tmp_path / "b.txt"
+    f1.write_text(jd, encoding="utf-8")
+    f2.write_text(jd.replace("ExampleAI", "OtherCo"), encoding="utf-8")
+    listing = tmp_path / "jobs.txt"
+    listing.write_text(f"{f1}\n{f2}\n", encoding="utf-8")
+
+    rows = batch_from_jobs_file(root, listing, workers=1, progress=False)
+    assert len(rows) == 2
+    bid = rows[0]["_batch_id"]
+    assert (root / "batches" / bid / "checkpoint.json").is_file()
+    # resume should skip done
+    rows2 = batch_from_jobs_file(root, listing, workers=1, resume=bid, progress=False)
+    assert len(rows2) == 2
+
+
+def test_experience_import_and_tutorial(root: Path, tmp_path: Path):
+    from compass_core.experience_bank import import_experiences, search_experience
+    from compass_core.tutorial import run_tutorial
+
+    src = tmp_path / "exp.jsonl"
+    src.write_text(
+        json.dumps({"id": "exp_t1", "q": "Describe a production incident", "company": ["Demo"], "topic": "behavioral"})
+        + "\n",
+        encoding="utf-8",
+    )
+    out = import_experiences(root, src)
+    assert out["imported"] == 1
+    hits = search_experience("incident", root=root)
+    assert any(h.get("id") == "exp_t1" for h in hits)
+
+    tut = run_tutorial(root)
+    assert len(tut["steps"]) >= 5
+    assert Path(tut["guide"]).is_file()

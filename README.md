@@ -134,9 +134,9 @@ flowchart LR
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
 | `/discover` | `discover` · `scout` · `watch scan` · `batch --jobs` · `skill-gap` · `grade` · `jd-analyze` | ATS/feeds/**multi**/巡检 · 评分 · JD红旗 |
-| `/resume` | `resume-patch` · `resume-metrics` · `resume-import` | 主题 patch · 密度/指标 · PDF 导入 |
-| `/interview` | `interview-pack` · `scorecard` · `questions --company` · `storybank` · `transcript-import` | 面试包 · 根因 · 大厂题包 · 故事库 |
-| `/diagnose` | `diagnose` · `export-report --mentor` · `research` · `calibrate` | 缺口罗盘 · 公司研究 · 校准 |
+| `/resume` | `resume-patch` · `resume-metrics` · `resume-import` | 主题 patch（可 `--job-ids --workers`）· 密度/指标 · PDF 导入 |
+| `/interview` | `interview-pack` · `scorecard` · `questions --company` · `storybank` · `transcript-import` | 面试包 · 根因 · 大厂题包 · 故事库 · 转录五维 |
+| `/diagnose` | `diagnose` · `export-report --mentor` · `research` · `calibrate` · `tutorial` · `report-summary` | 缺口罗盘 · 引导 · 练习汇总 |
 | `/track` | `track` · `offer` · `negotiate` · `obs` | 投递 · Offer · 谈判 · 本地可观测 |
 | `/desk` | `desk` | 轻量看板 |
 | — | `web` / `live` | **Web 主界面** |

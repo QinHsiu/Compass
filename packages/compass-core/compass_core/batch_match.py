@@ -202,31 +202,102 @@ def batch_from_jobs_file(
     *,
     workers: int = 5,
     fetch_fn=None,
+    resume: str | None = None,
+    progress: bool = True,
 ) -> list[dict]:
-    """Parallel evaluate URLs / board specs listed in a text file (compas v0.10)."""
+    """Parallel evaluate URLs / board specs; checkpoint + optional --resume (compas v0.21)."""
     root = Path(root)
     path = Path(jobs_file)
     if not path.is_file():
         raise FileNotFoundError(path)
     items = _read_job_lines(path)
     workers = max(1, min(int(workers or 5), 10))
-    rows: list[dict] = []
+
+    # checkpoint dir
+    if resume:
+        ck_dir = root / "batches" / resume
+        if not ck_dir.is_dir():
+            raise FileNotFoundError(f"resume batch not found: {ck_dir}")
+        bid = resume
+    else:
+        bid = f"url_{_utcnow_slug()}"
+        ck_dir = root / "batches" / bid
+        ck_dir.mkdir(parents=True, exist_ok=True)
+
+    ck_path = ck_dir / "checkpoint.json"
+    done: dict[str, dict] = {}
+    if ck_path.is_file():
+        try:
+            prev = json.loads(ck_path.read_text(encoding="utf-8"))
+            for row in prev.get("jobs") or []:
+                src = row.get("source") or row.get("item")
+                if src and not row.get("error"):
+                    done[str(src)] = row
+        except json.JSONDecodeError:
+            pass
+
+    pending = [it for it in items if it not in done]
+    rows: list[dict] = list(done.values())
+    total = len(items)
+    finished = len(done)
+
+    def _save_ck() -> None:
+        payload = {
+            "batch_id": bid,
+            "jobs_file": str(path),
+            "total": total,
+            "done": len(rows),
+            "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "jobs": rows,
+        }
+        ck_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def _one(it: str) -> dict:
-        return _process_url_or_spec(root, it, fetch_fn=fetch_fn)
+        row = _process_url_or_spec(root, it, fetch_fn=fetch_fn)
+        row.setdefault("source", it)
+        row["item"] = it
+        return row
 
-    if workers == 1 or len(items) <= 1:
-        for it in items:
-            rows.append(_one(it))
+    def _on_done(row: dict) -> None:
+        nonlocal finished
+        rows.append(row)
+        finished += 1
+        if progress:
+            title = row.get("title") or row.get("error") or row.get("source") or ""
+            print(f"[{finished}/{total}] {title}", flush=True)
+        _save_ck()
+
+    if not pending:
+        if progress:
+            print(f"[resume] all {total} items already done in {bid}", flush=True)
+    elif workers == 1 or len(pending) <= 1:
+        for it in pending:
+            _on_done(_one(it))
     else:
         with ThreadPoolExecutor(max_workers=workers) as ex:
-            futs = [ex.submit(_one, it) for it in items]
+            futs = [ex.submit(_one, it) for it in pending]
             for fut in as_completed(futs):
-                rows.append(fut.result())
+                _on_done(fut.result())
+
     rows.sort(
         key=lambda r: float(r.get("score_100") or r.get("global_1_5") or r.get("score") or 0),
         reverse=True,
     )
+    # finalize summary into same batch id
+    summary = {
+        "batch_id": bid,
+        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "count": len(rows),
+        "jobs": rows,
+        "resumed": bool(resume),
+        "jobs_file": str(path),
+    }
+    (ck_dir / "summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    # tag for callers
+    for r in rows:
+        r["_batch_id"] = bid
     return rows
 
 

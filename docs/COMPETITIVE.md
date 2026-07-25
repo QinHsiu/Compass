@@ -269,6 +269,20 @@ User asked to try JobSpy/Boss-style reach + Crawl4AI value — implemented **com
 | Crawl4AI extras | fit markdown + `crawl_career_depth` / `--depth 1` |
 | Boss CDP / LinkedIn scrape | still **not** shipped |
 
+## Learned from compas.txt refresh (v0.21.0)
+
+Latest `compas.txt` still lists batch/transcript/report/obs as top gaps — **mostly stale vs ≤0.20**. True polish closed:
+
+| Item | Adaptation |
+|:-----|:-----------|
+| Batch parallel polish | `checkpoint.json` + `--resume` + progress |
+| match/resume parallel | `--job-ids` + `--workers` |
+| Transcript 五维 | `answer_rubric` → oral_log scores → scorecard |
+| 面经 import | `experience import` |
+| Onboarding | `tutorial` + `report-summary` |
+
+Still deferred: Web practice charts, timeline PDF share, Celery, LangGraph, Glassdoor crawl.
+
 ## Out of scope (intentional)
 
 

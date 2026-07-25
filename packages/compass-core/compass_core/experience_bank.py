@@ -9,10 +9,27 @@ from pathlib import Path
 _BANK_PATH = Path(__file__).resolve().parent / "assets" / "questions" / "experience_bank.jsonl"
 
 
+def load_experience_bank(root: Path | None = None) -> list[dict]:
+    items = list(_load_bundled())
+    if root:
+        extra = Path(root) / "experiences"
+        if extra.is_dir():
+            for p in sorted(extra.glob("*.jsonl")):
+                for ln in p.read_text(encoding="utf-8").splitlines():
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    try:
+                        items.append(json.loads(ln))
+                    except json.JSONDecodeError:
+                        continue
+    return items
+
+
 @lru_cache(maxsize=1)
-def load_experience_bank() -> list[dict]:
+def _load_bundled() -> tuple:
     if not _BANK_PATH.is_file():
-        return []
+        return tuple()
     items = []
     for ln in _BANK_PATH.read_text(encoding="utf-8").splitlines():
         ln = ln.strip()
@@ -22,7 +39,7 @@ def load_experience_bank() -> list[dict]:
             items.append(json.loads(ln))
         except json.JSONDecodeError:
             continue
-    return items
+    return tuple(items)
 
 
 def search_experience(
@@ -31,12 +48,13 @@ def search_experience(
     company: str | None = None,
     topic: str | None = None,
     limit: int = 10,
+    root: Path | None = None,
 ) -> list[dict]:
     q = (query or "").strip().lower()
     co = (company or "").strip().lower()
     top = (topic or "").strip().lower()
     hits = []
-    for it in load_experience_bank():
+    for it in load_experience_bank(root):
         blob = " ".join(
             [
                 str(it.get("q") or ""),
@@ -63,6 +81,35 @@ def search_experience(
             hits.append((score, it))
     hits.sort(key=lambda x: -x[0])
     return [h for _, h in hits[:limit]]
+
+
+def import_experiences(root: Path, path: str | Path) -> dict:
+    """Append user JSONL into content/experiences/imported.jsonl."""
+    root = Path(root)
+    src = Path(path)
+    if not src.is_file():
+        return {"error": f"missing {src}"}
+    out_dir = root / "experiences"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / "imported.jsonl"
+    n = 0
+    with dest.open("a", encoding="utf-8") as f:
+        for ln in src.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                row = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            if not row.get("id"):
+                row["id"] = f"exp_user_{n+1:04d}"
+            if not row.get("q") and row.get("question"):
+                row["q"] = row["question"]
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            n += 1
+    _load_bundled.cache_clear()
+    return {"imported": n, "path": str(dest)}
 
 
 _TOPIC_TEMPLATES = {
@@ -150,9 +197,10 @@ def complete_experience(
     topic: str | None = None,
     limit: int = 10,
     id: str | None = None,
+    root: Path | None = None,
 ) -> list[dict]:
     if id:
-        hits = [it for it in load_experience_bank() if it.get("id") == id]
+        hits = [it for it in load_experience_bank(root) if it.get("id") == id]
     else:
-        hits = search_experience(query, company=company, topic=topic, limit=limit)
+        hits = search_experience(query, company=company, topic=topic, limit=limit, root=root)
     return [complete_answer(h) for h in hits]

@@ -272,6 +272,7 @@ def import_oral_log(root: Path, job_id: str) -> dict:
             turn=int(row.get("turn", turn)),
             question=q,
             answer=a,
+            scores=row.get("scores") if isinstance(row.get("scores"), dict) else None,
             gate_ok=gate.get("ok"),
             gate_status=gate.get("status"),
             gate_reason=str(gate.get("reason") or ""),

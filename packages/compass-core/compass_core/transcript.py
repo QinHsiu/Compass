@@ -239,6 +239,9 @@ def import_transcript(
     ts = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     with log_path.open("a", encoding="utf-8") as f:
         for n, p in enumerate(pairs, 1):
+            from .answer_rubric import score_qa_rubric
+
+            scores = score_qa_rubric(p["question"], p["answer"])
             row = {
                 "ts": ts,
                 "turn": n,
@@ -248,11 +251,17 @@ def import_transcript(
                 "q": p["question"],
                 "answer": p["answer"],
                 "a": p["answer"],
+                "scores": scores,
             }
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     (out_dir / "transcript_turns.json").write_text(
         json.dumps(
-            {"detected_format": detected, "turns": turns, "pairs": len(pairs)},
+            {
+                "detected_format": detected,
+                "turns": turns,
+                "pairs": len(pairs),
+                "rubric": "answer_rubric.score_qa_rubric",
+            },
             ensure_ascii=False,
             indent=2,
         ),
@@ -263,6 +272,7 @@ def import_transcript(
         from .scorecard import import_oral_log
 
         scorecard = import_oral_log(root, job_id)
+    agg = (scorecard or {}).get("aggregate") or {}
     return {
         "job_id": job_id,
         "detected_format": detected,
@@ -270,4 +280,5 @@ def import_transcript(
         "pairs": len(pairs),
         "oral_log": str(log_path),
         "scorecard_answers": len((scorecard or {}).get("answers") or []) if scorecard else 0,
+        "rubric_scores": agg.get("scores"),
     }

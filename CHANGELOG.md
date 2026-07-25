@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.0 — 2026-07-25
+
+compas.txt refresh — close true remaining deltas (matrix P0/P1 mostly stale vs ≤0.20):
+
+- **batch**: checkpoint + `--resume` + progress lines (`batches/*/checkpoint.json`)
+- **parallel**: `match-explain` / `resume-patch --job-ids --workers`
+- **transcript rubric**: per-Q five-dim heuristic → scorecard via oral_log `scores`
+- **experience import**: `experience import --file` → `content/experiences/`
+- **tutorial** / **report-summary**: onboarding steps + practice center alias
+- Docs: COMPETITIVE learned-from-compas v0.21; update oss `compas.txt` status
+
 ## 0.20.0 — 2026-07-25
 
 JobSpy-style multi discover + stronger export-HTML ingest + Crawl4AI patterns (still no JobSpy/Boss/Crawl4AI deps):
