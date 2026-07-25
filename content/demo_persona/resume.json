@@ -1,0 +1,58 @@
+{
+  "basics": {
+    "name": "林思远",
+    "label": "后端开发工程师",
+    "email": "siyuan.lin@example.com",
+    "phone": "138-****-6621",
+    "url": "https://github.com/siyuan-lin",
+    "summary": "一年 Java 后端开发经验，熟悉 Spring Boot 微服务日常开发与上线。业务侧重支付回调、日切对账、查询性能治理与消息消费稳定性；能独立完成中等复杂度需求落地。",
+    "location": { "city": "上海" }
+  },
+  "work": [
+    {
+      "name": "云栈科技",
+      "position": "后端开发工程师",
+      "startDate": "2024-07",
+      "summary": "交易与支付服务组 · ToB SaaS",
+      "highlights": [
+        "职责：支付回调落库、交易流水状态推进、日切对账、商户交易查询、值班答疑与文档",
+        "支付回调与日切对账：幂等键+状态机；日切差异约40→<5笔，人工核对约90→25分钟",
+        "交易查询性能：覆盖索引+短缓存；峰值P99约280→95ms，慢SQL日均30+→<5",
+        "Kafka积压应急：参与止血与复盘，推动超时预算/死信/熔断进入迭代",
+        "日常交付：微服务迭代、访问路径评审、关键路径审计日志、Code Review与单测"
+      ]
+    },
+    {
+      "name": "迅达零售",
+      "position": "后端开发实习生",
+      "startDate": "2023-07",
+      "endDate": "2024-03",
+      "summary": "订单中台 · 库存与关单",
+      "highlights": [
+        "职责：库存扣减、超时关单联调、接口文档与集成测试",
+        "库存扣减幂等：Redis令牌+DB唯一约束；6周重复扣减工单归零，超时率约0.8%→0.1%",
+        "超时关单：延迟队列联调与边界用例，减少状态未闭环资损工单"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "订单幂等组件练习项目",
+      "description": "令牌占用+唯一约束+集成测试样例，覆盖重复请求、超时重试与并发扣减"
+    }
+  ],
+  "education": [
+    {
+      "institution": "华东某重点高校",
+      "area": "软件工程",
+      "studyType": "本科",
+      "startDate": "2020-09",
+      "endDate": "2024-06"
+    }
+  ],
+  "skills": [
+    { "name": "Languages", "keywords": ["Java 17", "SQL", "Go(了解)"] },
+    { "name": "Backend", "keywords": ["Spring Boot", "Spring Cloud", "MyBatis", "MySQL", "Redis", "Kafka", "Docker"] },
+    { "name": "Engineering", "keywords": ["接口设计", "幂等", "对账", "慢SQL", "监控", "复盘"] }
+  ]
+}

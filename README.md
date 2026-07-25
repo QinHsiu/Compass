@@ -31,13 +31,37 @@
 <br/>
 
 [快速开始](#快速开始--quick-start) ·
+[演示](#演示--demo-video) ·
 [能力](#核心能力) ·
 [命令](#slash--cli) ·
+[宣传成片](docs/promo/README.md) ·
 [竞品学习](docs/COMPETITIVE.md) ·
 [迭代](docs/ITERATION.md) ·
 [合规](docs/COMPLIANCE.md)
 
 </div>
+
+---
+
+## 演示 / Demo Video
+
+以虚构人物「林思远」（1 年 Java 后端）走完：查岗 → 匹配 → 简历分析/修改 → 模拟面试 → 诊断建议 → **可投递一页简历**（约 1 分 30 秒，含中文旁白）。
+
+GitHub README **不能**直接播放仓库内相对路径的 MP4，因此这里用可内嵌的动图预览；完整有声成片请用下方链接下载或用 `<video>` CDN 地址打开。
+
+<div align="center">
+
+<img src="docs/promo/out/compass-backend-demo.gif" alt="Compass 后端求职闭环演示预览" width="900" />
+
+<video src="https://media.githubusercontent.com/media/QinHsiu/Compass/master/docs/promo/out/compass-backend-demo.mp4" controls width="900" poster="docs/promo/shots/01-home.png">
+</video>
+
+</div>
+
+- **有声 MP4（推荐）**：[下载 / 浏览器打开](https://media.githubusercontent.com/media/QinHsiu/Compass/master/docs/promo/out/compass-backend-demo.mp4)
+- 仓库路径：[`docs/promo/out/compass-backend-demo.mp4`](docs/promo/out/compass-backend-demo.mp4)（请用系统播放器打开，勿依赖 GitHub 文件页预览）
+- 本地播放页：[docs/promo/out/play.html](docs/promo/out/play.html) · [可投递一页简历](docs/promo/out/resume_onepager_lin.html)
+- [口播与分镜](docs/promo/COMPASS_DEMO_PLAYBOOK.md) · [宣传物料](docs/promo/README.md)
 
 ---
 

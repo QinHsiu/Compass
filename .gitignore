@@ -81,3 +81,11 @@ collectors/snapshots/
 # Anonymous demo data (safe to ship)
 !content/fixtures/
 !content/fixtures/**
+!content/demo_persona/
+!content/demo_persona/**
+
+# Promo TTS / intermediate renders (regenerable)
+docs/promo/out/_tts_work/
+docs/promo/out/*-silent.mp4
+docs/promo/out/_silent.mp4
+docs/promo/out/_with_audio.mp4

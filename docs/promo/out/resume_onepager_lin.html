@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>林思远 · 后端开发工程师</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #1a2332;
+    --muted: #5c6b7a;
+    --line: #d5dde8;
+    --teal: #0f766e;
+    --teal-soft: #eef7f6;
+    --paper: #ffffff;
+    --accent: #0d9488;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #c5ced9;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sheet {
+    width: 210mm;
+    height: 297mm;
+    margin: 12px auto;
+    background: var(--paper);
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 58mm 1fr;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    font-size: 9pt;
+    line-height: 1.4;
+    box-shadow: 0 12px 40px rgba(26, 35, 50, 0.18);
+    overflow: hidden;
+  }
+  @media print {
+    html, body { background: white; }
+    .sheet { margin: 0; box-shadow: none; }
+  }
+
+  .side {
+    background: #1a2332;
+    color: #e8eef5;
+    padding: 14mm 6.5mm 10mm;
+    display: flex;
+    flex-direction: column;
+    gap: 8mm;
+  }
+  .side h1 {
+    font-size: 17pt; font-weight: 700; letter-spacing: 0.06em; line-height: 1.2;
+  }
+  .side .role { font-size: 9pt; color: #99f6e4; margin-top: 2.5mm; font-weight: 600; }
+  .side .city { font-size: 8pt; color: #94a3b8; margin-top: 1.5mm; }
+  .side h2 {
+    font-size: 8pt; letter-spacing: 0.12em;
+    color: #5eead4; border-bottom: 1px solid rgba(94,234,212,0.35);
+    padding-bottom: 1.8mm; margin-bottom: 2.8mm;
+  }
+  .contact li {
+    list-style: none; font-size: 7.6pt; color: #cbd5e1;
+    margin: 2mm 0; word-break: break-all; line-height: 1.35;
+  }
+  .contact .k { color: #64748b; display: block; font-size: 6.8pt; margin-bottom: 0.4mm; }
+  .skill-block { margin-bottom: 3mm; }
+  .skill-block .lab { font-size: 7.2pt; color: #94a3b8; margin-bottom: 1mm; }
+  .chips { display: flex; flex-wrap: wrap; gap: 1.3mm; }
+  .chip {
+    font-size: 6.8pt; padding: 0.8mm 2mm;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(94,234,212,0.25);
+    border-radius: 2px; color: #e2e8f0;
+  }
+  .edu .school { font-weight: 600; font-size: 8.2pt; color: #f1f5f9; }
+  .edu .meta { font-size: 7.3pt; color: #94a3b8; margin-top: 1.2mm; line-height: 1.45; }
+  .side p.extra { font-size: 7.3pt; color: #94a3b8; line-height: 1.45; }
+
+  .main {
+    padding: 11mm 8.5mm 8mm 8mm;
+    display: flex;
+    flex-direction: column;
+    gap: 4.2mm;
+  }
+  .header {
+    border-bottom: 2px solid var(--teal);
+    padding-bottom: 3mm;
+  }
+  .header .line2 {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 1.5mm; font-size: 8pt; color: var(--muted);
+  }
+  .sec-title {
+    font-size: 9pt; font-weight: 700; color: var(--teal);
+    letter-spacing: 0.1em; margin-bottom: 2mm;
+    display: flex; align-items: center; gap: 2mm;
+  }
+  .sec-title::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+  }
+  .summary {
+    font-size: 8.4pt; color: #334155; text-align: justify;
+    background: var(--teal-soft); padding: 2.8mm 3.2mm;
+    border-left: 2.5px solid var(--accent);
+  }
+  .job { margin-bottom: 3.2mm; }
+  .job-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 3mm; margin-bottom: 0.8mm;
+  }
+  .job-head .co { font-weight: 700; font-size: 9.5pt; }
+  .job-head .title { color: var(--muted); font-weight: 500; font-size: 8.4pt; }
+  .job-head .when {
+    font-size: 7.6pt; color: var(--muted); white-space: nowrap;
+  }
+  .job .team { font-size: 7.6pt; color: #64748b; margin-bottom: 1.2mm; }
+  .job .duty {
+    font-size: 7.8pt; color: #475569; margin-bottom: 1.5mm; text-align: justify;
+  }
+  .job ul { padding-left: 3.8mm; }
+  .job li {
+    margin: 1.15mm 0; font-size: 8.1pt; color: #1e293b;
+    text-align: justify;
+  }
+  .proj { margin-bottom: 1.5mm; }
+  .proj .ph {
+    display: flex; justify-content: space-between; font-weight: 700; font-size: 8.6pt;
+    margin-bottom: 0.8mm;
+  }
+  .proj .ph span { font-weight: 500; color: var(--muted); font-size: 7.4pt; }
+  .proj ul { padding-left: 3.8mm; }
+  .proj li { font-size: 8pt; margin: 1mm 0; color: #334155; text-align: justify; }
+  .edu-main {
+    display: flex; justify-content: space-between; font-size: 8.3pt;
+  }
+  .edu-main strong { font-size: 8.8pt; }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <aside class="side">
+      <div>
+        <h1>林思远</h1>
+        <div class="role">后端开发工程师</div>
+        <div class="city">上海 · 1 年工作经验</div>
+      </div>
+
+      <div>
+        <h2>联系方式</h2>
+        <ul class="contact">
+          <li><span class="k">手机</span>138-****-6621</li>
+          <li><span class="k">邮箱</span>siyuan.lin@example.com</li>
+          <li><span class="k">GitHub</span>github.com/siyuan-lin</li>
+          <li><span class="k">求职意向</span>后端开发（交易 / 支付）</li>
+          <li><span class="k">期望城市</span>上海 / 杭州</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>专业技能</h2>
+        <div class="skill-block">
+          <div class="lab">编程语言</div>
+          <div class="chips">
+            <span class="chip">Java 17</span>
+            <span class="chip">SQL</span>
+            <span class="chip">Go（了解）</span>
+          </div>
+        </div>
+        <div class="skill-block">
+          <div class="lab">框架与中间件</div>
+          <div class="chips">
+            <span class="chip">Spring Boot</span>
+            <span class="chip">Spring Cloud</span>
+            <span class="chip">MyBatis</span>
+            <span class="chip">MySQL</span>
+            <span class="chip">Redis</span>
+            <span class="chip">Kafka</span>
+            <span class="chip">Docker</span>
+          </div>
+        </div>
+        <div class="skill-block">
+          <div class="lab">工程能力</div>
+          <div class="chips">
+            <span class="chip">接口设计</span>
+            <span class="chip">幂等设计</span>
+            <span class="chip">对账系统</span>
+            <span class="chip">慢 SQL 优化</span>
+            <span class="chip">单元测试</span>
+            <span class="chip">日志与监控</span>
+            <span class="chip">故障复盘</span>
+          </div>
+        </div>
+        <div class="skill-block">
+          <div class="lab">工具</div>
+          <div class="chips">
+            <span class="chip">Git</span>
+            <span class="chip">Maven</span>
+            <span class="chip">Jenkins</span>
+            <span class="chip">Grafana</span>
+            <span class="chip">Arthas</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="edu">
+        <h2>教育背景</h2>
+        <div class="school">华东某重点高校</div>
+        <div class="meta">
+          软件工程 · 本科<br/>
+          2020.09 – 2024.06<br/>
+          主修：数据结构、操作系统、<br/>数据库系统、计算机网络、<br/>分布式系统基础
+        </div>
+      </div>
+
+      <div>
+        <h2>语言能力</h2>
+        <p class="extra">普通话母语 · 英语可阅读技术文档与英文 Issue</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <div style="font-size:11pt;font-weight:700;">个人简历</div>
+        <div class="line2">
+          <span>后端开发工程师 · Java</span>
+          <span>可到岗：一个月内</span>
+        </div>
+      </header>
+
+      <section>
+        <div class="sec-title">个人优势</div>
+        <p class="summary">
+          一年 Java 后端开发经验，熟悉 Spring Boot 微服务日常开发与上线流程。业务侧重交易/支付方向：支付回调处理、日切对账、查询性能治理、消息队列消费稳定性。
+          能独立完成中等复杂度需求的设计与落地，注重接口幂等、数据正确性与可观测性；具备生产告警响应与复盘文档撰写经验。寻求在交易链路后端方向继续深耕。
+        </p>
+      </section>
+
+      <section>
+        <div class="sec-title">工作经历</div>
+
+        <div class="job">
+          <div class="job-head">
+            <div>
+              <span class="co">云栈科技</span>
+              <span class="title"> · 后端开发工程师</span>
+            </div>
+            <div class="when">2024.07 – 至今</div>
+          </div>
+          <div class="team">交易与支付服务组 · ToB SaaS · 上海</div>
+          <p class="duty">
+            <strong>工作职责：</strong>负责支付回调接收与落库、交易流水状态推进、日切对账任务、商户侧交易查询接口的开发与维护；
+            参与需求评审、接口设计、联调上线与值班答疑；编写设计说明与复盘文档，配合测试完成回归。
+          </p>
+          <ul>
+            <li>
+              <strong>支付回调与日切对账：</strong>实现通知幂等键与本地流水状态机，按渠道拉取对账文件自动匹配并生成差异工单；
+              日切差异由约 40 笔降至 5 笔以内，人工核对由日均约 90 分钟缩短至约 25 分钟，并保留人工复核环节保障资金安全。
+            </li>
+            <li>
+              <strong>交易查询性能优化：</strong>基于慢日志定位联合查询瓶颈，补充覆盖索引，对热点商户结果做短时缓存，接入 Grafana 监控峰值延迟与错误率；
+              工作日峰值 P99 由约 280ms 降至约 95ms，慢 SQL 由日均 30+ 条降至 5 条以内。
+            </li>
+            <li>
+              <strong>消息积压应急与稳定性建设：</strong>参与 Kafka 消费积压事故止血（限流保护写库、扩容消费者、修正错误重试策略），约 2.5 小时恢复服务；
+              复盘推动超时预算、死信队列与熔断阈值进入后续迭代。
+            </li>
+            <li>
+              <strong>日常交付：</strong>使用 Spring Boot / MyBatis 完成支付相关微服务迭代；评审 MySQL、Redis 访问路径，为关键写路径补充审计日志；
+              独立承接对账规则扩展、回调字段兼容等中等需求，涉及资损风险的变更与负责人对齐后上线。
+            </li>
+            <li>
+              <strong>协作与质量：</strong>参与 Code Review 与单测补充；跟进测试缺陷与线上客诉中的数据一致性问题，沉淀排查清单供组内复用。
+            </li>
+          </ul>
+        </div>
+
+        <div class="job">
+          <div class="job-head">
+            <div>
+              <span class="co">迅达零售</span>
+              <span class="title"> · 后端开发实习生</span>
+            </div>
+            <div class="when">2023.07 – 2024.03</div>
+          </div>
+          <div class="team">订单中台 · 库存与关单链路</div>
+          <p class="duty">
+            <strong>工作职责：</strong>参与订单库存扣减、超时关单相关接口开发与联调；编写接口文档与集成测试；协助排查大促压测与线上资损相关工单。
+          </p>
+          <ul>
+            <li>
+              <strong>库存扣减幂等改造：</strong>梳理重试导致多扣路径，引入 Redis 令牌与数据库唯一约束双重兜底，明确「先占库存、异步确认」边界；
+              上线后连续 6 周重复扣减工单归零，扣减接口超时率由约 0.8% 降至约 0.1%。
+            </li>
+            <li>
+              <strong>超时关单：</strong>参与延迟队列关单链路联调与边界用例补充，减少因状态未闭环产生的资损工单；熟悉订单状态流转与消息驱动最终一致性方案。
+            </li>
+            <li>
+              <strong>工程基础：</strong>完成接口单测与联调手册；跟随导师进行需求拆分、提测与发布，建立规范的后端交付习惯。
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-title">项目经历</div>
+        <div class="proj">
+          <div class="ph">
+            订单幂等组件练习项目
+            <span>个人 · Java / Redis / MySQL</span>
+          </div>
+          <ul>
+            <li>基于实习期库存扣减场景，整理「令牌占用 + 唯一约束 + 集成测试」样例，便于复盘幂等边界与失败重试策略。</li>
+            <li>覆盖重复请求、超时重试、并发扣减等用例，用于面试前自我演练与方案口述。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-title">教育经历</div>
+        <div class="edu-main">
+          <div>
+            <strong>华东某重点高校</strong> · 软件工程 · 本科
+          </div>
+          <div style="color:#5c6b7a;font-size:7.6pt;">2020.09 – 2024.06</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
