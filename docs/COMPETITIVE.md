@@ -14,10 +14,14 @@ UX primary surface is **Compass Web**, not Gradio. v0.6 focuses on **config onbo
 | Evidence gate | Claims need `evidence_id` |
 | Skill-gap preflight | JD skills → `existing` / `supported_by_evidence` / `gap`; never inject gap into resume |
 | Requirement matrix | Per JD line `direct` / `partial` / `gap` + recommendation band |
+| Quant grade | A–F + 1.0–5.0 dimensions on every match |
+| ATS discover | Public Greenhouse/Lever/Ashby board scan |
 | BEI probe | STAR completeness → scorecard structure + follow-up hints |
 | Question dedup | Skip bank questions already asked in scorecards |
-| Resume density/metrics | One-page lint + years/companies/degree rollup |
-| Practice rollup | Cross-job scorecard averages on desk |
+| Storybank | Evidence → STAR drafts with strength |
+| Resume density/metrics/import | One-page lint + metrics + PDF import |
+| Practice rollup / calibrate | Cross-job center + real-outcome drift notes |
+| Offer / negotiate | Six-dim compare + local negotiate pack |
 | Interview persona | technical / challenging / supportive / hr from JD + band |
 | Posting liveness | ATS detect + stale cap on recommendation |
 | Gap compass 4Q | Evidence / Narrative / Skill / Process |
@@ -155,7 +159,27 @@ Upstream: [santifer/career-ops](https://github.com/santifer/career-ops) (posting
 | Stale posting | age > 45d → cap strong/plausible → exploratory |
 | JD fields | `ParsedJD.url` / `posted_at`; `match.json.posting_liveness` |
 
-**Still deferred**: A–G LLM rubric golden harness, live HTTP liveness probe (local-first).
+**Still deferred** (pre-0.8): A–G LLM rubric golden harness, live HTTP liveness probe.
+
+## Learned from compas.txt P0–P2 (v0.8.0)
+
+Source gap list: `projects/oss_competitors/compas.txt`.
+
+| Priority | Gap | Compass adaptation |
+|:---------|:----|:-------------------|
+| P0 | ATS board scan | `ats_scan` + `discover --source ats` (Greenhouse/Lever/Ashby public JSON) |
+| P0 | A–F / 1–5 score | `grade` on `match.json` (deterministic from matrix + gates) |
+| P0 | `.env.example` | Already present (docs corrected) |
+| P0 | PDF → resume | `resume-import` heuristic JSON Resume subset |
+| P1 | Batch match | `batch-match` → `batches/*/summary.json` |
+| P1 | Storybank | `storybank` + pack `stories[]` |
+| P1 | Transcript import | `transcript-import` → oral_log + scorecard |
+| P1 | Offer decision | `offer` six-dim user scores + compare.md |
+| P1 | Report center | `practice-stats --export` |
+| P2 light | Negotiate | `negotiate` local templates (**no live salary**) |
+| P2 light | Calibration | `calibrate record|report` |
+
+**Still excluded**: Boss/拉勾 login scrape, Four-Leaf 10万岗/实时薪资, cloud Registry, enterprise monitoring.
 
 ## Out of scope (intentional)
 

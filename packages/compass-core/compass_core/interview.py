@@ -14,7 +14,7 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
     job_dir = root / "jobs" / job_id
     jd_data = json.loads((job_dir / "jd.json").read_text(encoding="utf-8"))
     match_data = json.loads((job_dir / "match.json").read_text(encoding="utf-8"))
-    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__})
+    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
     match = MatchResult.from_dict(match_data)
     evidence = {e.id: e for e in load_evidence(root)}
 
@@ -62,6 +62,10 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
 
     persona = pick_persona(jd, match.match_explain)
 
+    from .storybank import top_stories
+
+    stories = top_stories(root, limit=5, skills=jd.keywords)
+
     pack = {
         "job_id": job_id,
         "title": jd.title,
@@ -78,6 +82,8 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "match_explain": match.match_explain,
         "persona": persona,
         "bank_deduped": True,
+        "stories": stories,
+        "grade": match.grade,
     }
     from .retracted import collect_retracted_claims
 
@@ -160,6 +166,19 @@ def render_session(pack: dict) -> str:
             f"**persona**: `{persona.get('persona_id', '—')}` "
             f"({persona.get('label_zh') or persona.get('tone', '')})\n"
         )
+    gr = pack.get("grade") or {}
+    if gr.get("letter"):
+        band += f"**grade**: `{gr.get('letter')}` · {gr.get('global_1_5')}/5 — {gr.get('verdict') or ''}\n"
+
+    story_lines = []
+    for s in (pack.get("stories") or [])[:5]:
+        star_s = s.get("star") or {}
+        story_lines.append(
+            f"- `{s.get('id')}` strength={s.get('strength')} · "
+            f"S: {str(star_s.get('situation') or '')[:40]} / "
+            f"R: {str(star_s.get('result') or '')[:40]}"
+        )
+    stories_block = "\n".join(story_lines) or "- _(run `storybank rebuild`)_"
 
     return f"""# Interview session: {pack['title']} @ {pack['company']}
 
@@ -167,6 +186,10 @@ def render_session(pack: dict) -> str:
 ## Pack evidence
 
 {ev_list}
+
+## Storybank (top)
+
+{stories_block}
 
 ## Questions
 

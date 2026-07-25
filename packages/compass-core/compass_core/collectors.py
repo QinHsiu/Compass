@@ -110,3 +110,10 @@ def collect_career_html(root: Path, url: str, limit: int = 10) -> list[dict]:
         if len(results) >= limit:
             break
     return results
+
+
+def collect_ats_board(root: Path, board: str, limit: int = 10) -> list[dict]:
+    """Public Greenhouse/Lever/Ashby board → match_and_save."""
+    from .ats_scan import collect_ats
+
+    return collect_ats(root, board=board, limit=limit, match=True)

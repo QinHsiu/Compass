@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.0 — 2026-07-25
+
+compas.txt P0 + P1 + light P2 product gap fills (local-first):
+
+- **ATS scan**: `discover --source ats --board greenhouse|lever|ashby:slug` (public JSON APIs)
+- **Grade**: deterministic A–F + 1.0–5.0 dimensions on `match.json.grade`; CLI `grade`
+- **Resume import**: `resume-import --file` PDF/text → JSON Resume subset
+- **Batch match**: `batch-match --all-jobs|--from-ats` → `batches/*/summary.json`
+- **Storybank**: `storybank rebuild|list|show`; injected into interview pack
+- **Transcript**: `transcript-import` Otter/Zoom-like → oral_log + scorecard
+- **Offer compare**: six-dim radar user scores; `offer init|compare`
+- **Practice center**: `practice-stats --export` → `reports/practice_center.md`
+- **Negotiate**: local pack (no live salary API); `negotiate`
+- **Calibrate**: `calibrate record|report` practice vs real outcomes
+
+Still out of scope: login scrapers, Four-Leaf live job MCP, cloud registry, enterprise observability.
+
 ## 0.7.8 — 2026-07-25
 
 - Rounds 7–13 competitive fills:

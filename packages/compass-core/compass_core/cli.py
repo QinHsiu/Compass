@@ -8,7 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .collectors import collect_career_html, collect_paste, collect_rss
+from .collectors import collect_ats_board, collect_career_html, collect_paste, collect_rss
 from .diagnose import diagnose_and_save
 from .evidence import build_index, load_evidence
 from .gate import check_claims
@@ -199,7 +199,171 @@ def cmd_discover(args) -> int:
         rows = collect_career_html(root, args.url, limit=args.limit)
         print(json.dumps(rows, ensure_ascii=False, indent=2))
         return 0
+    if args.source == "ats":
+        board = getattr(args, "board", None)
+        if not board:
+            from .ats_scan import load_portals
+
+            portals = load_portals(root)
+            if not portals:
+                print(
+                    json.dumps(
+                        {"error": "ats requires --board greenhouse:slug or content/portals.yml"},
+                        ensure_ascii=False,
+                    )
+                )
+                return 1
+            from .ats_scan import collect_ats
+
+            rows = []
+            for spec in portals:
+                rows.extend(collect_ats(root, board=spec, limit=args.limit, match=True))
+            print(json.dumps(rows, ensure_ascii=False, indent=2))
+            return 0
+        rows = collect_ats_board(root, board, limit=args.limit)
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        return 0
     print(f"unknown source {args.source}", file=sys.stderr)
+    return 1
+
+
+def cmd_grade(args) -> int:
+    from .grade import compute_grade
+    from .match import MatchResult as MR
+
+    root = _root(args)
+    path = root / "jobs" / args.job_id / "match.json"
+    if not path.is_file():
+        print(json.dumps({"error": f"missing {path}"}, ensure_ascii=False))
+        return 1
+    data = json.loads(path.read_text(encoding="utf-8"))
+    mr = MR.from_dict(data)
+    g = compute_grade(
+        matrix_score=float((mr.match_explain or {}).get("matrix_score") or 0),
+        coverage=mr.coverage,
+        fatal_count=int((mr.match_explain or {}).get("fatal_count") or 0),
+        recommendation=str((mr.match_explain or {}).get("recommendation") or ""),
+        evidence_hit_n=len(mr.evidence_hits or []),
+        skill_gap=mr.skill_gap,
+        profile_fit=mr.profile_fit,
+        posting_liveness=mr.posting_liveness,
+    )
+    data["grade"] = g
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps(g, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_resume_import(args) -> int:
+    from .resume_import import import_resume_file
+
+    out = import_resume_file(_root(args), args.file, job_id=args.job_id)
+    print(json.dumps({"path": out["path"], "warnings": out["warnings"], "skills": (out["resume"].get("skills") or [])[:12]}, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_batch_match(args) -> int:
+    from .batch_match import batch_from_ats, match_existing_jobs, save_batch
+
+    root = _root(args)
+    if args.from_ats:
+        rows = batch_from_ats(root, args.from_ats, limit=args.limit)
+        label = "ats"
+    elif args.all_jobs:
+        rows = match_existing_jobs(root, workers=args.workers)
+        label = "all"
+    else:
+        print(json.dumps({"error": "need --all-jobs or --from-ats greenhouse:slug"}, ensure_ascii=False))
+        return 1
+    summary = save_batch(root, rows, label=label)
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_storybank(args) -> int:
+    from .storybank import load_storybank, rebuild_storybank, top_stories
+
+    root = _root(args)
+    action = args.storybank_action
+    if action == "rebuild":
+        idx = rebuild_storybank(root)
+        print(json.dumps({"count": idx["count"]}, ensure_ascii=False, indent=2))
+        return 0
+    if action == "list":
+        idx = load_storybank(root)
+        slim = [{"id": i["id"], "title": i.get("title"), "strength": i.get("strength")} for i in (idx.get("items") or [])]
+        print(json.dumps(slim, ensure_ascii=False, indent=2))
+        return 0
+    if action == "show":
+        items = load_storybank(root).get("items") or []
+        hit = next((i for i in items if i.get("id") == args.id), None)
+        if not hit:
+            # try top by skill
+            hit = (top_stories(root, limit=1) or [None])[0]
+        print(json.dumps(hit, ensure_ascii=False, indent=2))
+        return 0 if hit else 1
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_transcript_import(args) -> int:
+    from .transcript import import_transcript
+
+    root = _root(args)
+    text = Path(args.file).read_text(encoding="utf-8") if args.file else (args.text or "")
+    if not text.strip():
+        print(json.dumps({"error": "need --file or --text"}, ensure_ascii=False))
+        return 1
+    out = import_transcript(root, args.job_id, text, sync_scorecard=not args.no_scorecard)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_offer(args) -> int:
+    from .offer_compare import compare_offers, empty_offer, load_offer, save_offer
+
+    root = _root(args)
+    action = args.offer_action
+    if action == "init":
+        o = empty_offer(args.id, title=args.title or "", company=args.company or "")
+        path = save_offer(root, o)
+        print(json.dumps({"path": str(path), "offer": o}, ensure_ascii=False, indent=2))
+        return 0
+    if action == "show":
+        print(json.dumps(load_offer(root, args.id), ensure_ascii=False, indent=2))
+        return 0
+    if action == "compare":
+        ids = [x.strip() for x in (args.ids or "").split(",") if x.strip()]
+        if len(ids) < 1:
+            print(json.dumps({"error": "need --ids a,b"}, ensure_ascii=False))
+            return 1
+        print(json.dumps(compare_offers(root, ids), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_negotiate(args) -> int:
+    from .negotiate import build_negotiate_pack
+
+    out = build_negotiate_pack(_root(args), job_id=args.job_id)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_calibrate(args) -> int:
+    from .calibrate import calibration_report, record_outcome
+
+    root = _root(args)
+    action = args.calibrate_action
+    if action == "record":
+        item = record_outcome(root, args.job_id, args.outcome, note=args.note or "")
+        print(json.dumps(item, ensure_ascii=False, indent=2))
+        return 0
+    if action == "report":
+        print(json.dumps(calibration_report(root), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
     return 1
 
 
@@ -349,9 +513,13 @@ def cmd_interview(args) -> int:
 
 
 def cmd_practice_stats(args) -> int:
-    from .practice_stats import practice_rollup
+    from .practice_stats import export_practice_center, practice_rollup
 
-    print(json.dumps(practice_rollup(_root(args)), ensure_ascii=False, indent=2))
+    root = _root(args)
+    if getattr(args, "export", False):
+        print(json.dumps(export_practice_center(root), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps(practice_rollup(root), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -623,13 +791,75 @@ def build_parser() -> argparse.ArgumentParser:
     mx.set_defaults(func=cmd_match_explain)
 
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
-    d.add_argument("--source", choices=("paste", "rss", "career"), required=True)
+    d.add_argument("--source", choices=("paste", "rss", "career", "ats"), required=True)
     d.add_argument("--text", default=None)
     d.add_argument("--text-file", default=None)
     d.add_argument("--url", default=None)
+    d.add_argument("--board", default=None, help="ats board spec e.g. greenhouse:acme")
     d.add_argument("--job-id", default=None)
     d.add_argument("--limit", type=int, default=10)
     d.set_defaults(func=cmd_discover)
+
+    gr = sub.add_parser("grade", parents=[parent], help="A-F / 1-5 grade for a matched job")
+    gr.add_argument("--job-id", required=True)
+    gr.set_defaults(func=cmd_grade)
+
+    ri = sub.add_parser("resume-import", parents=[parent], help="PDF/text → resume.json")
+    ri.add_argument("--file", required=True)
+    ri.add_argument("--job-id", default=None)
+    ri.set_defaults(func=cmd_resume_import)
+
+    bm = sub.add_parser("batch-match", parents=[parent], help="batch match jobs / ATS board")
+    bm.add_argument("--all-jobs", action="store_true")
+    bm.add_argument("--from-ats", default=None, help="greenhouse:slug")
+    bm.add_argument("--limit", type=int, default=10)
+    bm.add_argument("--workers", type=int, default=2)
+    bm.set_defaults(func=cmd_batch_match)
+
+    sb = sub.add_parser("storybank", parents=[parent], help="STAR storybank from evidence")
+    sb_sub = sb.add_subparsers(dest="storybank_action", required=True)
+    sb_r = sb_sub.add_parser("rebuild")
+    sb_r.set_defaults(func=cmd_storybank)
+    sb_l = sb_sub.add_parser("list")
+    sb_l.set_defaults(func=cmd_storybank)
+    sb_s = sb_sub.add_parser("show")
+    sb_s.add_argument("--id", default=None)
+    sb_s.set_defaults(func=cmd_storybank)
+
+    ti = sub.add_parser("transcript-import", parents=[parent], help="import Otter/Zoom-like transcript")
+    ti.add_argument("--job-id", required=True)
+    ti.add_argument("--file", default=None)
+    ti.add_argument("--text", default=None)
+    ti.add_argument("--no-scorecard", action="store_true")
+    ti.set_defaults(func=cmd_transcript_import)
+
+    of = sub.add_parser("offer", parents=[parent], help="offer six-dim compare")
+    of_sub = of.add_subparsers(dest="offer_action", required=True)
+    of_i = of_sub.add_parser("init")
+    of_i.add_argument("--id", required=True)
+    of_i.add_argument("--title", default="")
+    of_i.add_argument("--company", default="")
+    of_i.set_defaults(func=cmd_offer)
+    of_sh = of_sub.add_parser("show")
+    of_sh.add_argument("--id", required=True)
+    of_sh.set_defaults(func=cmd_offer)
+    of_c = of_sub.add_parser("compare")
+    of_c.add_argument("--ids", required=True, help="comma-separated offer ids")
+    of_c.set_defaults(func=cmd_offer)
+
+    ng = sub.add_parser("negotiate", parents=[parent], help="local negotiate pack (no live salary)")
+    ng.add_argument("--job-id", default=None)
+    ng.set_defaults(func=cmd_negotiate)
+
+    cal = sub.add_parser("calibrate", parents=[parent], help="practice vs real outcome calibration")
+    cal_sub = cal.add_subparsers(dest="calibrate_action", required=True)
+    cal_r = cal_sub.add_parser("record")
+    cal_r.add_argument("--job-id", required=True)
+    cal_r.add_argument("--outcome", required=True, choices=("pass", "fail", "offer", "ghosted", "withdrawn"))
+    cal_r.add_argument("--note", default="")
+    cal_r.set_defaults(func=cmd_calibrate)
+    cal_rep = cal_sub.add_parser("report")
+    cal_rep.set_defaults(func=cmd_calibrate)
 
     r = sub.add_parser("resume-patch", parents=[parent], help="build evidence-gated resume patch")
     r.add_argument("--job-id", required=True)
@@ -690,6 +920,7 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[parent],
         help="cross-job interview practice rollup (intervAI)",
     )
+    ps.add_argument("--export", action="store_true", help="write reports/practice_center.md")
     ps.set_defaults(func=cmd_practice_stats)
 
     rm = sub.add_parser(

@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.7.8-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.8.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -133,11 +133,11 @@ flowchart LR
 | `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
-| `/discover` | `discover` · `skill-gap` · `match-explain` | 岗位导入 · 技能三态 · 需求矩阵 · 活跃度 |
-| `/resume` | `resume-patch` · `resume-metrics` | 主题 patch · 密度/指标 lint |
-| `/interview` | `interview-pack` · `scorecard …` · `practice-stats` | 面试包 · 五维记分 · 练习汇总 |
+| `/discover` | `discover` · `skill-gap` · `match-explain` · `grade` · `batch-match` | 岗位导入（含 ATS 公开板）· 技能三态 · 矩阵 · A–F 评分 · 批量 |
+| `/resume` | `resume-patch` · `resume-metrics` · `resume-import` | 主题 patch · 密度/指标 · PDF 导入 |
+| `/interview` | `interview-pack` · `scorecard` · `storybank` · `transcript-import` · `practice-stats` | 面试包 · 记分 · 故事库 · 转录 · 报告中心 |
 | `/diagnose` | `diagnose` | 缺口罗盘（自动 seed track） |
-| `/track` | `track --seed-from-match` / `--list-due` | 投递看板 · 跟进日 |
+| `/track` | `track` · `offer` · `negotiate` · `calibrate` | 投递看板 · Offer 六维 · 谈判骨架 · 结果校准 |
 | `/desk` | `desk` | 轻量看板 |
 | — | `web` / `live` | **Web 主界面** |
 | — | `studio` | Gradio（可选） |

@@ -17,6 +17,7 @@ from .match_explain import (
 from .posting_liveness import apply_liveness_to_explain, assess_liveness
 from .profile_fit import apply_to_explain, assess_profile_fit
 from .skill_gap import classify_jd, profile_skill_list
+from .grade import compute_grade
 
 
 def _empty_skill_gap() -> dict:
@@ -50,6 +51,17 @@ def _empty_liveness() -> dict:
     }
 
 
+def _empty_grade() -> dict:
+    return {
+        "letter": "F",
+        "global_1_5": 1.0,
+        "dimensions": {},
+        "apply_line": False,
+        "verdict": "",
+        "coverage": 0.0,
+    }
+
+
 @dataclass
 class MatchResult:
     job_id: str
@@ -66,6 +78,7 @@ class MatchResult:
     match_explain: dict = field(default_factory=_empty_explain)
     profile_fit: dict = field(default_factory=_empty_profile_fit)
     posting_liveness: dict = field(default_factory=_empty_liveness)
+    grade: dict = field(default_factory=_empty_grade)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -107,6 +120,12 @@ class MatchResult:
             lv = _empty_liveness()
             lv.update(kwargs["posting_liveness"])
             kwargs["posting_liveness"] = lv
+        if "grade" not in kwargs or not isinstance(kwargs.get("grade"), dict):
+            kwargs["grade"] = _empty_grade()
+        else:
+            g = _empty_grade()
+            g.update(kwargs["grade"])
+            kwargs["grade"] = g
         return cls(**kwargs)
 
 
@@ -156,6 +175,16 @@ def match_jd(
     explain = apply_to_explain(explain, fit)
     liveness = assess_liveness(url=jd.url, posted_at=jd.posted_at)
     explain = apply_liveness_to_explain(explain, liveness)
+    grade = compute_grade(
+        matrix_score=float(explain.get("matrix_score") or 0),
+        coverage=coverage,
+        fatal_count=int(explain.get("fatal_count") or 0),
+        recommendation=str(explain.get("recommendation") or ""),
+        evidence_hit_n=len(evidence_hits),
+        skill_gap=gap.to_dict(),
+        profile_fit=fit,
+        posting_liveness=liveness,
+    )
 
     return MatchResult(
         job_id=jd.job_id,
@@ -172,6 +201,7 @@ def match_jd(
         match_explain=explain,
         profile_fit=fit,
         posting_liveness=liveness,
+        grade=grade,
     )
 
 
@@ -202,6 +232,7 @@ def match_and_save(root: Path, jd_text: str, job_id: str | None = None) -> Match
             result.match_explain,
             profile_fit=result.profile_fit,
             posting_liveness=result.posting_liveness,
+            grade=result.grade,
         ),
         encoding="utf-8",
     )

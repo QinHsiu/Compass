@@ -1,0 +1,8 @@
+# Public ATS boards for `compass discover --source ats` (no secrets).
+# Spec format: greenhouse:slug | lever:slug | ashby:slug
+# Leave empty or comment out until you add employers you follow.
+boards: []
+# Example:
+# boards:
+#   - greenhouse:openai
+#   - lever:example
