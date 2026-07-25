@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.17.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.22.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -128,22 +128,23 @@ Gradio Studio 仍可用（可选）：`compass studio`。
 | **画像约束** | `profile_fit`：地点 / 目标岗 / avoid → 可强制 skip |
 | **面试记分卡** | 五维 rubric 持久化 `scorecard.json`，同步 `session.md` |
 | **勿声称清单** | `retracted_claims`：硬缺口 / 门禁失败 → 面试风险点 |
-| **投递节奏** | match band → `follow_up_due` / `suggested_action`；`track --list-due` |
+| **投递节奏** | match band → `follow_up_due` / `suggested_action`；`track --list-due` / `--patterns` |
+| **求职信 / 申请邮件** | `cover-letter` · `apply-email`（仅草稿，证据门禁，永不自动发送） |
 | **缺口罗盘** | 证据 / 叙事 / 技能 / 流程 + 做什么 / 证明物 / 耗时 |
 | **12 主题模板** | JSON Resume 兼容 HTML/MD，[来源备注](packages/compass-core/compass_core/assets/templates/SOURCES.md) |
 | **LLM/Agent 题库** | 精选 + 公开源爬取，[来源备注](packages/compass-core/compass_core/assets/questions/SOURCES.md) |
 | **合规发现** | 粘贴 / RSS / career 页；默认不做平台自动投递 |
 
-闭环：`上传 → 匹配(explain) → patch → 面试(scorecard) → 诊断 → track`
+闭环：`上传 → 匹配(explain) → patch → cover/email → 面试(scorecard) → 诊断 → track/patterns`
 
 ```mermaid
 flowchart LR
   upload[Upload PDF/Image] --> evidence[evidence/]
   evidence --> jd[Paste JD]
   jd --> match[Match + skill_gap + matrix + profile_fit]
-  match --> pipe[Resume Interview Diagnose]
+  match --> pipe[Resume Cover Email Interview Diagnose]
   pipe --> score[Scorecard / Retracted]
-  score --> track[Track cadence]
+  score --> track[Track cadence / patterns]
 ```
 
 竞品对照与本轮学习笔记：[docs/COMPETITIVE.md](docs/COMPETITIVE.md) · 变更记录：[CHANGELOG.md](CHANGELOG.md)

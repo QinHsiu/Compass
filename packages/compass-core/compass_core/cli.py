@@ -886,6 +886,36 @@ def cmd_negotiate(args) -> int:
     return 0
 
 
+def cmd_cover_letter(args) -> int:
+    from .cover_letter import build_cover_letter
+
+    root = _root(args)
+    out = build_cover_letter(
+        root,
+        args.job_id,
+        angle=getattr(args, "angle", None) or "why",
+        lang=getattr(args, "lang", None) or "zh",
+    )
+    audit_event(root, "cover_letter", job_id=args.job_id, angle=out.get("angle"))
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_apply_email(args) -> int:
+    from .apply_email import build_apply_email
+
+    root = _root(args)
+    out = build_apply_email(
+        root,
+        args.job_id,
+        mode=getattr(args, "mode", None) or "recruiter",
+        referrer=getattr(args, "referrer", None) or "",
+    )
+    audit_event(root, "apply_email", job_id=args.job_id, mode=out.get("mode"))
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_calibrate(args) -> int:
     from .calibrate import calibration_report, record_outcome
 
@@ -1227,6 +1257,13 @@ def cmd_track(args) -> int:
     from .track import list_due, seed_from_match, upsert
 
     root = _root(args)
+    if getattr(args, "patterns", False):
+        from .track_patterns import analyze_patterns
+
+        out = analyze_patterns(root)
+        audit_event(root, "track_patterns", total=out.get("total"))
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
     if getattr(args, "list_due", False):
         items = list_due(root)
         print(json.dumps({"due": items, "count": len(items)}, ensure_ascii=False, indent=2))
@@ -1239,7 +1276,12 @@ def cmd_track(args) -> int:
         print(json.dumps(item, ensure_ascii=False, indent=2))
         return 0
     if not args.job_id or not args.status:
-        print(json.dumps({"error": "need --job-id and --status (or --list-due / --seed-from-match)"}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"error": "need --job-id and --status (or --list-due / --seed-from-match / --patterns)"},
+                ensure_ascii=False,
+            )
+        )
         return 1
     item = upsert(
         root,
@@ -1698,6 +1740,26 @@ def build_parser() -> argparse.ArgumentParser:
     ng.add_argument("--job-id", default=None)
     ng.set_defaults(func=cmd_negotiate)
 
+    cl = sub.add_parser(
+        "cover-letter",
+        parents=[parent],
+        help="evidence-gated cover letter draft (never sends)",
+    )
+    cl.add_argument("--job-id", required=True)
+    cl.add_argument("--angle", default="why", choices=("why", "problems", "approach", "tone"))
+    cl.add_argument("--lang", default="zh")
+    cl.set_defaults(func=cmd_cover_letter)
+
+    ae = sub.add_parser(
+        "apply-email",
+        parents=[parent],
+        help="application email draft recruiter|referral|cold (never sends)",
+    )
+    ae.add_argument("--job-id", required=True)
+    ae.add_argument("--mode", default="recruiter", choices=("recruiter", "referral", "cold"))
+    ae.add_argument("--referrer", default="", help="name for referral mode")
+    ae.set_defaults(func=cmd_apply_email)
+
     cal = sub.add_parser("calibrate", parents=[parent], help="practice vs real outcome calibration")
     cal_sub = cal.add_subparsers(dest="calibrate_action", required=True)
     cal_r = cal_sub.add_parser("record")
@@ -1822,6 +1884,7 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--follow-up-due", default=None, help="ISO date YYYY-MM-DD")
     t.add_argument("--seed-from-match", action="store_true", help="seed band + follow_up_due from match_explain")
     t.add_argument("--list-due", action="store_true", help="list items with follow_up_due <= today")
+    t.add_argument("--patterns", action="store_true", help="analyze rejection/skip patterns from board")
     t.set_defaults(func=cmd_track)
 
     desk = sub.add_parser("desk", parents=[parent], help="start local desk UI")

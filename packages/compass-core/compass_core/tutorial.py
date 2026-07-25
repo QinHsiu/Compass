@@ -32,18 +32,23 @@ STEPS = [
     },
     {
         "id": 5,
+        "title": "求职信 + 申请邮件草稿",
+        "cmd": "python -m compass_core.cli cover-letter --root content --job-id <id>",
+        "hint": "可选 apply-email --mode recruiter|referral|cold；仅草稿不发送",
+    },
+    {
+        "id": 6,
         "title": "面试包 + 练习",
         "cmd": "python -m compass_core.cli interview-pack --root content --job-id <id>",
         "hint": "随后可用 scorecard / transcript-import",
     },
     {
-        "id": 6,
-        "title": "诊断与统计",
+        "id": 7,
+        "title": "诊断、投递看板与拒信模式",
         "cmd": "python -m compass_core.cli diagnose --root content --job-id <id>",
-        "hint": "report-summary / practice-stats --export 看练习趋势",
+        "hint": "track --patterns / report-summary 看拒信模式与练习趋势",
     },
 ]
-
 
 def run_tutorial(root: Path, *, step: int | None = None) -> dict:
     root = Path(root)

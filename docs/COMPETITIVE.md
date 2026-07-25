@@ -283,6 +283,19 @@ Latest `compas.txt` still lists batch/transcript/report/obs as top gaps — **mo
 
 Still deferred: Web practice charts, timeline PDF share, Celery, LangGraph, Glassdoor crawl.
 
+## Learned from /exp_loop online scan (v0.22.0)
+
+Fresh scan (2026-07-25): [career-ops](https://github.com/santifer/career-ops) v1.13, [Resume-Matcher](https://github.com/srbhr/Resume-Matcher), [HireForge](https://github.com/profitelai/hireforge), [LuJie-Careerkit](https://github.com/Chozzc/Lujie-Careerkit).
+
+| Competitor signal | Compass adaptation |
+|:------------------|:-------------------|
+| Cover letter + angle prompts | `cover-letter --angle` evidence-gated |
+| Application email drafts | `apply-email --mode recruiter\|referral\|cold` |
+| Rejection pattern targeting | `track --patterns` |
+| STAR+Reflection story bank | `storybank` `star.reflection` |
+
+**Still deferred**: LinkedIn scrape/optimizer, browser auto-fill apply, Celery, multi-agent rewrite.
+
 ## Out of scope (intentional)
 
 

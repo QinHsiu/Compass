@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.0 — 2026-07-25
+
+`/exp_loop` competitive refresh (online scan 2026-07-25): close cover/email/patterns gaps vs career-ops · Resume-Matcher · HireForge.
+
+- **cover-letter**: evidence-gated draft (`jobs/{id}/cover_letter.md`) — angles why/problems/approach/tone; never sends
+- **apply-email**: recruiter / referral / cold drafts (`apply_email.md`) — never sends
+- **track --patterns**: rejection/skip targeting advice → `track/patterns.md`
+- **storybank STAR+R**: `star.reflection` for reuse coaching
+- Docs: COMPETITIVE Round 14; `docs/exp/competitive-loop-2026-07-25/`
+
 ## 0.21.0 — 2026-07-25
 
 compas.txt refresh — close true remaining deltas (matrix P0/P1 mostly stale vs ≤0.20):

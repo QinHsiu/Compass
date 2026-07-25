@@ -45,6 +45,11 @@ def rebuild_storybank(root: Path) -> dict:
             if metrics
             else ("含可量化结果" if _METRIC_RE.search(blob) else "（补充 Result + 指标或 UNVERIFIED）")
         )
+        # STAR+R (career-ops Interview Story Bank): short reflection for reuse
+        reflection = (
+            f"复用提示：用「{title}」回答行为题时，先对齐 JD 关键词 "
+            f"{', '.join(skills[:3]) or '相关技能'}，再讲指标；承认团队边界，不夸大 Owner。"
+        )
         story = {
             "id": f"story_{ev.id}",
             "evidence_ids": [ev.id],
@@ -56,6 +61,7 @@ def rebuild_storybank(root: Path) -> dict:
                 "task": task,
                 "action": action,
                 "result": result,
+                "reflection": reflection,
             },
         }
         items.append(story)
