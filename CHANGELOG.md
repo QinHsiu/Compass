@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.8 — 2026-07-25
+
+- Rounds 7–13 competitive fills:
+  - **bei_probe** (interview-skills) — STAR/ownership probe → follow-up + scorecard `structure` / `bei_probe`
+  - **question_dedup** (interview-guide) — filter already-asked bank hits in pack
+  - **resume_lint** (open-resume) — one-page density in `ats_report`
+  - **resume_metrics** (jsonresume) — years/companies/projects/degree; CLI `resume-metrics`
+  - **practice_stats** (intervAI) — cross-job rollup; desk + CLI `practice-stats`
+  - **interview_persona** (IntervAI-xuanyiying) — pack persona + opening question
+  - **posting_liveness** (career-ops leftover) — ATS detect + stale band cap on `match.json`
+
 ## 0.7.7 — 2026-07-25
 
 - Core: **profile_fit** gate (prisma-ai Round 6) — locations / target_roles / avoid → `match.json.profile_fit`; can force recommendation `skip` or cap at `exploratory`

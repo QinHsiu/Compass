@@ -348,6 +348,35 @@ def cmd_interview(args) -> int:
     return 0
 
 
+def cmd_practice_stats(args) -> int:
+    from .practice_stats import practice_rollup
+
+    print(json.dumps(practice_rollup(_root(args)), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_resume_metrics(args) -> int:
+    from .resume_lint import lint_resume_density
+    from .resume_metrics import calculate_key_metrics
+
+    root = _root(args)
+    if not args.resume and not args.job_id:
+        print(json.dumps({"error": "need --job-id or --resume"}, ensure_ascii=False))
+        return 1
+    path = Path(args.resume) if args.resume else root / "resumes" / args.job_id / "resume.json"
+    if not path.is_file():
+        print(json.dumps({"error": f"missing {path}"}, ensure_ascii=False))
+        return 1
+    resume = json.loads(path.read_text(encoding="utf-8"))
+    out = {
+        "path": str(path),
+        "metrics": calculate_key_metrics(resume),
+        "density": lint_resume_density(resume),
+    }
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_scorecard(args) -> int:
     from .scorecard import import_oral_log, load_scorecard, record_answer, sync_session_md
 
@@ -655,6 +684,22 @@ def build_parser() -> argparse.ArgumentParser:
     i = sub.add_parser("interview-pack", parents=[parent], help="build interview pack + session")
     i.add_argument("--job-id", required=True)
     i.set_defaults(func=cmd_interview)
+
+    ps = sub.add_parser(
+        "practice-stats",
+        parents=[parent],
+        help="cross-job interview practice rollup (intervAI)",
+    )
+    ps.set_defaults(func=cmd_practice_stats)
+
+    rm = sub.add_parser(
+        "resume-metrics",
+        parents=[parent],
+        help="resume key metrics + one-page density lint",
+    )
+    rm.add_argument("--job-id", default=None)
+    rm.add_argument("--resume", default=None, help="path to resume.json")
+    rm.set_defaults(func=cmd_resume_metrics)
 
     sc = sub.add_parser("scorecard", parents=[parent], help="interview rubric scorecard")
     sc_sub = sc.add_subparsers(dest="scorecard_action", required=True)

@@ -14,6 +14,12 @@ UX primary surface is **Compass Web**, not Gradio. v0.6 focuses on **config onbo
 | Evidence gate | Claims need `evidence_id` |
 | Skill-gap preflight | JD skills → `existing` / `supported_by_evidence` / `gap`; never inject gap into resume |
 | Requirement matrix | Per JD line `direct` / `partial` / `gap` + recommendation band |
+| BEI probe | STAR completeness → scorecard structure + follow-up hints |
+| Question dedup | Skip bank questions already asked in scorecards |
+| Resume density/metrics | One-page lint + years/companies/degree rollup |
+| Practice rollup | Cross-job scorecard averages on desk |
+| Interview persona | technical / challenging / supportive / hr from JD + band |
+| Posting liveness | ATS detect + stale cap on recommendation |
 | Gap compass 4Q | Evidence / Narrative / Skill / Process |
 | Multi-form | **Compass Web** + optional Gradio + Skill + CLI + MCP |
 | Local-first | Data under `content/` |
@@ -83,6 +89,73 @@ Upstream: [weicanie/prisma-ai](https://github.com/weicanie/prisma-ai) (jobSeekDe
 |:----------|:----------------------------|
 | Destination/city/role memory | `profile.locations` / `target_roles` / `constraints.avoid` |
 | Filter before apply | `profile_fit` status pass/warn/block → band override |
+
+## Learned from interview-skills (Round 7)
+
+Upstream: [jennifer88huang/interview-skills](https://github.com/jennifer88huang/interview-skills) (BEI/STAR completeness coaching).
+
+| interview-skills | Compass adaptation (v0.7.8) |
+|:-----------------|:----------------------------|
+| Probe missing STAR parts | `bei_probe.probe_star` → structure score + hints |
+| Collective-only answers | ownership flag when only 「我们」 |
+| Coach follow-up | `next_followup` prefers probe hints; scorecard stores `bei_probe` |
+
+## Learned from interview-guide (Round 8)
+
+Upstream: [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide) (large Q bank; avoid repeats).
+
+| interview-guide | Compass adaptation (v0.7.8) |
+|:----------------|:----------------------------|
+| Avoid re-asking | `question_dedup` hashes prior scorecard/oral questions |
+| Pack filter | `build_pack` drops already-asked bank hits |
+
+## Learned from open-resume (Round 9)
+
+Upstream: [xitanggg/open-resume](https://github.com/xitanggg/open-resume) (one-page / ATS density).
+
+| open-resume | Compass adaptation (v0.7.8) |
+|:------------|:----------------------------|
+| One-page budget | `resume_lint.lint_resume_density` in `ats_report.density` |
+| Checklist | `one_page_density_ok` |
+
+## Learned from jsonresume.org (Round 10)
+
+Upstream: [jsonresume/jsonresume.org](https://github.com/jsonresume/jsonresume.org) (structured resume metrics).
+
+| jsonresume | Compass adaptation (v0.7.8) |
+|:-----------|:----------------------------|
+| Key metrics | `resume_metrics` years/companies/projects/degree |
+| Surface | diagnose + CLI `resume-metrics` |
+
+## Learned from intervAI (Round 11)
+
+Upstream: [xuan7-7/intervAI](https://github.com/xuan7-7/intervAI) (practice history rollup).
+
+| intervAI | Compass adaptation (v0.7.8) |
+|:---------|:----------------------------|
+| Cross-session stats | `practice_stats.practice_rollup` |
+| Desk / CLI | desk overview + `practice-stats` |
+
+## Learned from IntervAI-xuanyiying (Round 12)
+
+Upstream: [xuanyiying/IntervAI](https://github.com/xuanyiying/IntervAI) (interviewer personas).
+
+| IntervAI | Compass adaptation (v0.7.8) |
+|:---------|:----------------------------|
+| Persona tones | `interview_persona.pick_persona` → pack + opening Q |
+| Pressure vs coach | skip/fatal → challenging; HR/intern → hr |
+
+## Learned from career-ops leftover (Round 13)
+
+Upstream: [santifer/career-ops](https://github.com/santifer/career-ops) (posting legitimacy / ATS hosts).
+
+| career-ops | Compass adaptation (v0.7.8) |
+|:-----------|:----------------------------|
+| ATS URL detect | `posting_liveness.detect_ats` (greenhouse/lever/ashby/workday) |
+| Stale posting | age > 45d → cap strong/plausible → exploratory |
+| JD fields | `ParsedJD.url` / `posted_at`; `match.json.posting_liveness` |
+
+**Still deferred**: A–G LLM rubric golden harness, live HTTP liveness probe (local-first).
 
 ## Out of scope (intentional)
 

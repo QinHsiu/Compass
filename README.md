@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.7.7-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.7.8-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -133,9 +133,9 @@ flowchart LR
 | `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
-| `/discover` | `discover` · `skill-gap` · `match-explain` | 岗位导入 · 技能三态 · 需求矩阵 |
-| `/resume` | `resume-patch` | 主题 patch（不注入 gap 技能） |
-| `/interview` | `interview-pack` · `scorecard …` | 面试包 · 五维记分 |
+| `/discover` | `discover` · `skill-gap` · `match-explain` | 岗位导入 · 技能三态 · 需求矩阵 · 活跃度 |
+| `/resume` | `resume-patch` · `resume-metrics` | 主题 patch · 密度/指标 lint |
+| `/interview` | `interview-pack` · `scorecard …` · `practice-stats` | 面试包 · 五维记分 · 练习汇总 |
 | `/diagnose` | `diagnose` | 缺口罗盘（自动 seed track） |
 | `/track` | `track --seed-from-match` / `--list-due` | 投递看板 · 跟进日 |
 | `/desk` | `desk` | 轻量看板 |

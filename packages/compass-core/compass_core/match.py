@@ -14,6 +14,7 @@ from .match_explain import (
     render_match_explain_md,
     summarize_matrix,
 )
+from .posting_liveness import apply_liveness_to_explain, assess_liveness
 from .profile_fit import apply_to_explain, assess_profile_fit
 from .skill_gap import classify_jd, profile_skill_list
 
@@ -39,6 +40,16 @@ def _empty_profile_fit() -> dict:
     return {"status": "pass", "blockers": [], "warnings": []}
 
 
+def _empty_liveness() -> dict:
+    return {
+        "status": "unknown",
+        "ats": "unknown",
+        "posted_at": None,
+        "age_days": None,
+        "stale_days_threshold": 45,
+    }
+
+
 @dataclass
 class MatchResult:
     job_id: str
@@ -54,13 +65,14 @@ class MatchResult:
     requirement_matrix: list[dict] = field(default_factory=list)
     match_explain: dict = field(default_factory=_empty_explain)
     profile_fit: dict = field(default_factory=_empty_profile_fit)
+    posting_liveness: dict = field(default_factory=_empty_liveness)
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> "MatchResult":
-        """Load match.json; tolerate older files missing skill_gap / matrix / profile_fit."""
+        """Load match.json; tolerate older files missing skill_gap / matrix / profile_fit / liveness."""
         kwargs = {k: data[k] for k in cls.__dataclass_fields__ if k in data}
         if "skill_gap" not in kwargs or not isinstance(kwargs.get("skill_gap"), dict):
             kwargs["skill_gap"] = _empty_skill_gap()
@@ -87,6 +99,14 @@ class MatchResult:
             pf = _empty_profile_fit()
             pf.update(kwargs["profile_fit"])
             kwargs["profile_fit"] = pf
+        if "posting_liveness" not in kwargs or not isinstance(
+            kwargs.get("posting_liveness"), dict
+        ):
+            kwargs["posting_liveness"] = _empty_liveness()
+        else:
+            lv = _empty_liveness()
+            lv.update(kwargs["posting_liveness"])
+            kwargs["posting_liveness"] = lv
         return cls(**kwargs)
 
 
@@ -134,6 +154,8 @@ def match_jd(
     explain = summarize_matrix(rows, evidence_count=len(evidence))
     fit = assess_profile_fit(jd, profile)
     explain = apply_to_explain(explain, fit)
+    liveness = assess_liveness(url=jd.url, posted_at=jd.posted_at)
+    explain = apply_liveness_to_explain(explain, liveness)
 
     return MatchResult(
         job_id=jd.job_id,
@@ -149,6 +171,7 @@ def match_jd(
         requirement_matrix=[r.to_dict() for r in rows],
         match_explain=explain,
         profile_fit=fit,
+        posting_liveness=liveness,
     )
 
 
@@ -173,7 +196,13 @@ def match_and_save(root: Path, jd_text: str, job_id: str | None = None) -> Match
 
     rows = [RequirementRow(**r) for r in result.requirement_matrix]
     (job_dir / "match_explain.md").write_text(
-        render_match_explain_md(jd, rows, result.match_explain, profile_fit=result.profile_fit),
+        render_match_explain_md(
+            jd,
+            rows,
+            result.match_explain,
+            profile_fit=result.profile_fit,
+            posting_liveness=result.posting_liveness,
+        ),
         encoding="utf-8",
     )
     return result

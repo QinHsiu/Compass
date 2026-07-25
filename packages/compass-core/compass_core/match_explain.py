@@ -188,6 +188,7 @@ def render_match_explain_md(
     rows: list[RequirementRow],
     summary: dict,
     profile_fit: dict | None = None,
+    posting_liveness: dict | None = None,
 ) -> str:
     def table(kind: str, title: str) -> str:
         subset = [r for r in rows if r.kind == kind]
@@ -227,12 +228,20 @@ def render_match_explain_md(
             )
             + "\n"
         )
+    lv = posting_liveness or {}
+    lv_block = ""
+    if lv:
+        lv_block = (
+            f"\n## Posting liveness\n\n"
+            f"**status**: `{lv.get('status', 'unknown')}` · **ats**: `{lv.get('ats', 'unknown')}`"
+            f" · age_days={lv.get('age_days', '—')} · posted_at={lv.get('posted_at') or '—'}\n"
+        )
     return f"""# Match explain: {jd.title} @ {jd.company}
 
 **job_id**: `{jd.job_id}`  
 **recommendation**: `{band}` · **confidence**: `{conf}` · **matrix_score**: {ms}  
 **direct/partial/gap**: {summary.get('direct_count', 0)}/{summary.get('partial_count', 0)}/{summary.get('gap_count', 0)} · **fatal**: {summary.get('fatal_count', 0)}
-{pf_block}
+{pf_block}{lv_block}
 {table("responsibility", "Responsibilities")}
 {table("hard", "Hard requirements")}
 {table("nice", "Nice to have")}

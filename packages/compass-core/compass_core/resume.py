@@ -151,6 +151,11 @@ def ats_report(
     gap_lower = {s.lower() for s in (sg.get("gap") or [])}
     resume_skills = [s for s in (resume.get("skills") or [])]
     injected_gaps = [s for s in resume_skills if s.lower() in gap_lower]
+    from .resume_lint import lint_resume_density
+    from .resume_metrics import calculate_key_metrics
+
+    density = lint_resume_density(resume)
+    metrics = calculate_key_metrics(resume)
     return {
         "keyword_coverage": round(len(present) / max(len(jd.keywords), 1), 3),
         "keywords_present": present,
@@ -161,11 +166,14 @@ def ats_report(
         "unverified_bullets": unverified,
         "rejected_bullets": list(rejected_bullets or []),
         "match_score": match.score,
+        "density": density,
+        "metrics": metrics,
         "checklist": {
             "has_skills_section": bool(resume.get("skills")),
             "has_evidence_citations": "ev_" in json.dumps(resume),
             "no_unverified_as_fact": len(unverified) == 0,
             "no_gap_skills_injected": len(injected_gaps) == 0,
+            "one_page_density_ok": density.get("one_page_ok", True),
         },
     }
 

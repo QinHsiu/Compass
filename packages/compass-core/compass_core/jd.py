@@ -73,6 +73,8 @@ class ParsedJD:
     hard_requirements: list[str] = field(default_factory=list)
     nice_to_have: list[str] = field(default_factory=list)
     keywords: list[str] = field(default_factory=list)
+    url: str | None = None
+    posted_at: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -118,6 +120,24 @@ def _split_bullets(text: str) -> list[str]:
         elif len(ln) > 12 and ln not in items:
             items.append(ln)
     return items
+
+
+def _extract_url(text: str) -> str | None:
+    m = re.search(r"https?://[^\s\]\)<>\"']+", text)
+    return m.group(0).rstrip(".,;") if m else None
+
+
+def _extract_posted_at(text: str) -> str | None:
+    for ln in text.splitlines()[:20]:
+        m = re.match(
+            r"^(?:发布|posted|date|更新日期)\s*[:：]\s*(.+)$",
+            ln.strip(),
+            re.I,
+        )
+        if m:
+            return m.group(1).strip()[:32]
+    m = re.search(r"(20\d{2}[-/]\d{1,2}[-/]\d{1,2})", text[:400])
+    return m.group(1) if m else None
 
 
 def parse_jd(text: str, job_id: str | None = None) -> ParsedJD:
@@ -168,4 +188,6 @@ def parse_jd(text: str, job_id: str | None = None) -> ParsedJD:
         hard_requirements=hard[:20],
         nice_to_have=nice[:15],
         keywords=keywords[:40],
+        url=_extract_url(text),
+        posted_at=_extract_posted_at(text),
     )

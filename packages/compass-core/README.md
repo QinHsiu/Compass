@@ -1,10 +1,10 @@
 # compass-core
 
-Library + CLI for Compass (v0.7.7+):
+Library + CLI for Compass (v0.7.8+):
 
-- JD parse · evidence index · **skill_gap** · **requirement matrix** · **profile_fit**
-- Evidence gate · resume JSON patch · interview pack · **scorecard** · **retracted_claims**
-- Diagnose 4Q · track cadence · desk · collectors
+- JD parse · evidence index · **skill_gap** · **requirement matrix** · **profile_fit** · **posting_liveness**
+- Evidence gate · resume JSON patch · **resume_lint** / **resume_metrics** · interview pack · **scorecard** · **bei_probe** · **persona** · **question_dedup**
+- Diagnose 4Q · **practice_stats** · track cadence · desk · collectors
 
 ```bash
 python -m compass_core.cli --help

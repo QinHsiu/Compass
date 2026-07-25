@@ -85,7 +85,10 @@ def _auto_scores_from_gate(
     evidence_ids: list[str],
     requirement_ids: list[str],
     matrix: list[dict],
+    answer: str = "",
 ) -> dict[str, int]:
+    from .bei_probe import probe_star
+
     credibility = 5 if gate_ok and gate_status == "verified" else (3 if gate_ok else 1)
     substance = 4 if evidence_ids else 2
     relevance = 3
@@ -102,7 +105,7 @@ def _auto_scores_from_gate(
         elif fits:
             relevance = 2
     jd_fit = relevance
-    structure = 3  # reserved for coach/manual
+    structure = int(probe_star(answer).get("structure_score") or 3)
     return {
         "substance": substance,
         "structure": structure,
@@ -190,7 +193,10 @@ def record_answer(
     known_req = {r.get("id") for r in matrix}
     req_ids = [r for r in req_ids if not known_req or r in known_req]
 
-    auto = _auto_scores_from_gate(ok, status, cited, req_ids, matrix)
+    from .bei_probe import probe_star
+
+    probe = probe_star(answer)
+    auto = _auto_scores_from_gate(ok, status, cited, req_ids, matrix, answer=answer)
     final_scores = {d: _clamp_score((scores or {}).get(d, auto[d])) for d in DIMENSIONS}
 
     entry = {
@@ -201,6 +207,11 @@ def record_answer(
         "evidence_ids": cited,
         "requirement_ids": req_ids,
         "scores": final_scores,
+        "bei_probe": {
+            "ok": probe.get("ok"),
+            "missing": probe.get("missing") or [],
+            "hints": probe.get("hints") or [],
+        },
         "notes": notes or "",
         "confidence": confidence or "medium",
     }

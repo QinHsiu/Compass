@@ -176,6 +176,8 @@ def _overview(root: Path) -> dict:
     ddir = root / "diagnoses"
     if ddir.is_dir():
         diagnoses = sorted(p.name for p in ddir.iterdir() if p.is_dir())
+    from .practice_stats import practice_rollup
+
     return {
         "jobs": jobs,
         "track": board.get("items") or [],
@@ -183,6 +185,7 @@ def _overview(root: Path) -> dict:
         "diagnoses": diagnoses,
         "templates": _templates_meta(),
         "question_bank_size": _bank_size(),
+        "practice": practice_rollup(root),
     }
 
 

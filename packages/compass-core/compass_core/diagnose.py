@@ -15,7 +15,7 @@ def _load_job(root: Path, job_id: str) -> tuple[ParsedJD, MatchResult]:
     job_dir = root / "jobs" / job_id
     jd_data = json.loads((job_dir / "jd.json").read_text(encoding="utf-8"))
     match_data = json.loads((job_dir / "match.json").read_text(encoding="utf-8"))
-    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__})
+    jd = ParsedJD(**{k: jd_data[k] for k in ParsedJD.__dataclass_fields__ if k in jd_data})
     match = MatchResult.from_dict(match_data)
     return jd, match
 
@@ -156,6 +156,12 @@ def render_report(jd: ParsedJD, match: MatchResult, actions: list[dict]) -> str:
             f"direct/partial/gap={mx.get('direct_count', 0)}/{mx.get('partial_count', 0)}/{mx.get('gap_count', 0)}；"
             f"fatal={mx.get('fatal_count', 0)}）。"
         )
+    lv = match.posting_liveness or {}
+    if lv.get("status"):
+        summary += (
+            f" 岗位活跃度 `{lv.get('status')}`"
+            f"（ats={lv.get('ats', 'unknown')}；age_days={lv.get('age_days', '—')}）。"
+        )
     return f"""# Diagnose: {jd.title} @ {jd.company}
 
 **job_id**: `{jd.job_id}`  
@@ -262,11 +268,24 @@ def diagnose_and_save(root: Path, job_id: str) -> dict:
         track_item = seed_from_match(root, job_id)
     except Exception:
         track_item = None
+    resume_metrics = None
+    resume_path = root / "resumes" / job_id / "resume.json"
+    if resume_path.is_file():
+        from .resume_metrics import calculate_key_metrics
+
+        resume_metrics = calculate_key_metrics(
+            json.loads(resume_path.read_text(encoding="utf-8"))
+        )
+    from .practice_stats import practice_rollup
+
     return {
         "job_id": job_id,
         "actions": len(actions),
         "score": match.score,
         "bank_drills": len(drills),
         "track_item": track_item,
+        "resume_metrics": resume_metrics,
+        "practice": practice_rollup(root),
+        "posting_liveness": match.posting_liveness,
         "path": str(out),
     }

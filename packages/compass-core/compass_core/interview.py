@@ -53,6 +53,14 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
             lang=lang,
         )
     bank_hits = enrich_hits(bank_hits, lang=lang)
+    from .question_dedup import filter_bank_hits, load_asked_hashes
+
+    asked = load_asked_hashes(root)
+    bank_hits = filter_bank_hits(bank_hits, asked)
+
+    from .interview_persona import pick_persona
+
+    persona = pick_persona(jd, match.match_explain)
 
     pack = {
         "job_id": job_id,
@@ -68,6 +76,8 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "lang": lang,
         "requirement_matrix": match.requirement_matrix,
         "match_explain": match.match_explain,
+        "persona": persona,
+        "bank_deduped": True,
     }
     from .retracted import collect_retracted_claims
 
@@ -143,6 +153,12 @@ def render_session(pack: dict) -> str:
         band = (
             f"\n**match band**: `{mx.get('recommendation', '—')}` · "
             f"matrix={mx.get('matrix_score', '—')} · confidence={mx.get('confidence', '—')}\n"
+        )
+    persona = pack.get("persona") or {}
+    if persona:
+        band += (
+            f"**persona**: `{persona.get('persona_id', '—')}` "
+            f"({persona.get('label_zh') or persona.get('tone', '')})\n"
         )
 
     return f"""# Interview session: {pack['title']} @ {pack['company']}
@@ -225,6 +241,12 @@ def next_followup(
 
     # Rule path (always available)
     def _rules() -> str:
+        from .bei_probe import followup_from_probe, probe_star
+
+        probe = probe_star(last_answer or "")
+        pf = followup_from_probe(probe)
+        if pf and (not gate_ok or not probe.get("ok")):
+            return pf
         if not gate_ok:
             eid = evidence[0]["evidence_id"] if evidence else "ev_xxx"
             return (
@@ -280,4 +302,12 @@ def next_followup(
 
 def opening_question(pack: dict) -> str:
     title = pack.get("title") or "本岗位"
+    persona = pack.get("persona") or {}
+    pid = persona.get("persona_id") or "technical"
+    if pid == "challenging":
+        return f"请用 90 秒证明你适合 {title}——我会追问任何缺少 evidence_id 的指标。"
+    if pid == "hr":
+        return f"请介绍你为什么选择 {title}，并引用至少一个 evidence_id 说明匹配点。"
+    if pid == "supportive":
+        return f"我们可以慢慢来：先用 90 秒介绍你与 {title} 最相关的一段经历，记得 cite evidence_id。"
     return f"请用 90 秒介绍你为什么适合 {title}，并引用至少一个 evidence_id。"
