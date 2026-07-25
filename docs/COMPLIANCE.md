@@ -24,6 +24,14 @@ Authenticated list parsing may run only when **all** of the following hold:
 2. Session material is user-provided (`content/sessions/*.storage_state.json`) — Compass does not log in for you.
 3. Code path stays under `collectors/experimental/` / `compass_core.auth_collect` (fixture HTML preferred in CI).
 
+## Opt-in live compensation (v0.15+)
+
+Real-time salary (`comp lookup --live` / `comp refresh`) may call **user-configured** OfferShow-compatible HTTP APIs or generic `COMPASS_COMP_LIVE_URL`.
+
+- Official OfferShow / OfferHero are **WeChat mini-programs**; the vendor asks third parties not to bulk-scrape. Compass does **not** ship a WeChat reverse-engineered crawler.
+- Preferred paths: configure your own gateway, or `comp ingest-live` from a capture you exported for personal use.
+- Local JD salary bands (`--sources jobs`) do not need network.
+
 Compass will not implement credential stuffing, captcha farms, or ToS-bypass services.
 
 ## Design rules
@@ -33,6 +41,7 @@ Compass will not implement credential stuffing, captcha farms, or ToS-bypass ser
 3. Evidence gate: do not invent work history; mark unverifiable claims `UNVERIFIED`.
 4. Job Warehouse / MCP `jobs.search` reads **local** data only — not a hosted third-party 18万岗 dump.
 5. APM: default spans stay in `logs/spans.jsonl`; OTLP only when `OTEL_EXPORTER_OTLP_ENDPOINT` or `COMPASS_OTEL=1`.
+6. Job intel: never present single-source or implausible salary/hours/reputation claims as facts; mark `UNVERIFIED` / `rejected` (see `docs/intel.md`).
 
 ## Research-only extensions
 

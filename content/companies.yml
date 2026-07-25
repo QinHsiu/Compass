@@ -1,0 +1,13 @@
+# Official company career pages + public ATS boards for `recommend jobs`
+# Copy to content/companies.yml and edit. Prefer greenhouse:/lever:/ashby: when available.
+companies:
+  - name: OpenAI
+    ats: greenhouse:openai
+    career_url: https://openai.com/careers
+  - name: Anthropic
+    ats: greenhouse:anthropic
+    career_url: https://www.anthropic.com/careers
+  - name: ByteDance
+    career_url: https://jobs.bytedance.com/
+  - name: Tencent
+    career_url: https://careers.tencent.com/

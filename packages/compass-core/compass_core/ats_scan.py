@@ -179,12 +179,20 @@ def normalize_jobs(ats: str, slug: str, payload: Any) -> list[dict]:
             desc = _strip_html(str(j.get("descriptionHtml") or j.get("descriptionPlain") or ""))
             loc = str(j.get("location") or "")
             posted = str(j.get("publishedAt") or j.get("updatedAt") or "")[:10] or None
+            comp = j.get("compensation") or j.get("compensationTierSummary") or ""
+            if isinstance(comp, dict):
+                comp = json.dumps(comp, ensure_ascii=False)
+            elif isinstance(comp, list):
+                comp = "; ".join(str(x) for x in comp[:5])
+            else:
+                comp = str(comp or "")
             body_parts = [
                 f"职位：{title}",
                 f"公司：{company}",
                 f"工作地：{loc}" if loc else "",
                 f"发布：{posted}" if posted else "",
                 f"链接：{abs_url}" if abs_url else "",
+                f"薪资：{comp}" if comp else "",
                 "",
                 desc[:6000],
             ]
@@ -196,6 +204,7 @@ def normalize_jobs(ats: str, slug: str, payload: Any) -> list[dict]:
                     "posted_at": posted,
                     "ats": ats,
                     "board": slug,
+                    "salary_hint": comp,
                     "text": "\n".join(p for p in body_parts if p),
                 }
             )

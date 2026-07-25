@@ -1,0 +1,25 @@
+{
+  "offershow": {
+    "base_url": "",
+    "token": "",
+    "search_path": "/salary/query",
+    "method": "POST"
+  },
+  "http": {
+    "url": "",
+    "method": "GET"
+  },
+  "levels": {
+    "url": "",
+    "method": "GET",
+    "note": "Set COMPASS_LEVELS_API to a Levels-compatible JSON search URL"
+  },
+  "extra_endpoints": [
+    {
+      "name": "custom_salary_api",
+      "url": "",
+      "method": "GET"
+    }
+  ],
+  "ttl_seconds": 3600
+}

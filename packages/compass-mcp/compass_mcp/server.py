@@ -88,10 +88,36 @@ def tool_jobs_get(job_id: str) -> dict:
     return {"error": f"missing {job_id}"}
 
 
-def tool_comp_lookup(title: str = "", level: str = "", location: str = "", cash: float | None = None) -> dict:
-    from compass_core.comp_bench import coach_script, lookup_comp
+def tool_comp_lookup(
+    title: str = "",
+    level: str = "",
+    location: str = "",
+    cash: float | None = None,
+    live: bool = False,
+    query: str = "",
+    company: str = "",
+) -> dict:
+    import os
 
-    out = lookup_comp(_root(), title=title, level=level, location=location)
+    from compass_core.comp_bench import coach_script, lookup_comp, lookup_comp_merged
+
+    accept = os.environ.get("COMPASS_ACCEPT_TOS_RISK", "").lower() in ("1", "true", "yes")
+    try:
+        if live:
+            out = lookup_comp_merged(
+                _root(),
+                title=title,
+                level=level,
+                location=location,
+                company=company,
+                query=query or title,
+                live=True,
+                accept_tos_risk=accept,
+            )
+        else:
+            out = lookup_comp(_root(), title=title or query, level=level, location=location)
+    except PermissionError as e:
+        return {"error": str(e), "hint": "Set COMPASS_ACCEPT_TOS_RISK=1 for live"}
     out["coach"] = coach_script(out, your_cash=cash)
     return out
 
@@ -147,10 +173,20 @@ def main() -> None:
         return json.dumps(tool_jobs_get(job_id), ensure_ascii=False, indent=2)
 
     @mcp.tool()
-    def comp_lookup(title: str = "", level: str = "", location: str = "", cash: float = 0) -> str:
-        """Local compensation benchmarks (no live scrape). cash=0 means omit."""
+    def comp_lookup(
+        title: str = "",
+        level: str = "",
+        location: str = "",
+        cash: float = 0,
+        live: bool = False,
+        query: str = "",
+        company: str = "",
+    ) -> str:
+        """Compensation lookup. live=True needs COMPASS_ACCEPT_TOS_RISK=1 + OfferShow API or ingest."""
         return json.dumps(
-            tool_comp_lookup(title, level, location, cash if cash else None),
+            tool_comp_lookup(
+                title, level, location, cash if cash else None, live=live, query=query, company=company
+            ),
             ensure_ascii=False,
             indent=2,
         )

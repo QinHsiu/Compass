@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.17.0 — 2026-07-25
+
+Multi-source job intel with anti-fabrication filters:
+
+- **intel dossier / verify-salary**: posting · work · pay · hours · reputation · layoff risk; ≥2 sources to corroborate
+- **plausibility**: reject rumor packs (e.g. 硕+2年·年薪1000万); peer/band caps
+- **safe_landing** score with cited reasons only
+- Live `comp` path drops `rejected_implausible` samples
+- Docs: `docs/intel.md`
+
+## 0.16.0 — 2026-07-25
+
+Multi-source live pay + company-career job recommend:
+
+- **recommend jobs** / `discover --source companies`: crawl official `career_url` + public Greenhouse/Lever/Ashby; auto-detect ATS from HTML; rank by match
+- **companies.yml** seed + `assets/companies_seed.json`
+- **comp --live sources**: `levels`, `career`/`warehouse`, `extra_endpoints` alongside offershow/http/jobs
+- Ashby postings include compensation fields in JD text when present
+- Docs: `docs/recommend.md`
+
+## 0.15.0 — 2026-07-25
+
+Live compensation (OfferShow-oriented):
+
+- **comp lookup --live**: OfferShow-compatible HTTP + generic live URL + JD salary bands
+- **comp refresh / ingest-live**: force fetch cache; import mini-program/Charles JSON captures
+- Docs: `docs/comp_live.md`; COMPLIANCE opt-in live section
+- MCP `comp_lookup(live=true)` via `COMPASS_ACCEPT_TOS_RISK`
+
 ## 0.14.0 — 2026-07-25
 
 compas.txt「核心能力短板」真增量（文中 P0/P1 多为陈旧标注，已在 v0.8–0.13）：

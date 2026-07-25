@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.14.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.17.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -176,6 +176,9 @@ docs/                  # 合规 · 竞品 · 迭代计划
 
 - 题库与岗位默认仅限**公开**源；登录态采集需 `--i-accept-tos-risk`（见 COMPLIANCE）。
 - 十万岗对标为**本地** Job Warehouse + MCP `jobs_search`，非托管竞品库。
+- 实时薪资：`comp lookup --live`（OfferShow / Levels / HTTP / JD / 官网爬取入库），见 [docs/comp_live.md](docs/comp_live.md)。
+- 岗位推荐：`recommend jobs` 从各公司官网 + 公开 ATS 抓取，见 [docs/recommend.md](docs/recommend.md)。
+- 多源论证 / 拒虚假：`intel dossier|verify-salary`，见 [docs/intel.md](docs/intel.md)。
 - 简历 / 证据 / 画像仅存本地 `content/`，默认不上云、不提交真实经历。
 - 详见 [docs/COMPLIANCE.md](docs/COMPLIANCE.md) · [docs/observability.md](docs/observability.md)。
 

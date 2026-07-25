@@ -223,8 +223,43 @@ def cmd_discover(args) -> int:
         rows = collect_ats_board(root, board, limit=args.limit)
         print(json.dumps(rows, ensure_ascii=False, indent=2))
         return 0
+    if args.source == "companies":
+        from .career_recommend import recommend_jobs
+        from .observability import audit_event, span
+
+        with span(root, "recommend"):
+            out = recommend_jobs(
+                root,
+                keyword=getattr(args, "keyword", None),
+                location=getattr(args, "location", None),
+                limit=args.limit or 20,
+                match=not getattr(args, "no_match", False),
+                workers=getattr(args, "workers", 4) or 4,
+            )
+        audit_event(root, "recommend", count=len(out.get("recommended") or []))
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
     print(f"unknown source {args.source}", file=sys.stderr)
     return 1
+
+
+def cmd_recommend(args) -> int:
+    from .career_recommend import recommend_jobs
+    from .observability import audit_event, span
+
+    root = _root(args)
+    with span(root, "recommend"):
+        out = recommend_jobs(
+            root,
+            keyword=args.keyword,
+            location=args.location,
+            limit=args.limit or 20,
+            match=not args.no_match,
+            workers=args.workers or 4,
+        )
+    audit_event(root, "recommend", count=len(out.get("recommended") or []))
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
 
 
 def cmd_grade(args) -> int:
@@ -431,17 +466,100 @@ def cmd_train(args) -> int:
     return 1
 
 
-def cmd_comp(args) -> int:
-    from .comp_bench import coach_script, lookup_comp
+def cmd_intel(args) -> int:
+    from .job_intel import build_dossier, verify_salary_claim
 
     root = _root(args)
-    out = lookup_comp(
-        root,
-        title=args.title or "",
-        level=args.level or "",
-        location=args.location or "",
-        limit=args.limit or 10,
-    )
+    action = args.intel_action
+    if action == "verify-salary":
+        out = verify_salary_claim(
+            claimed=args.claimed,
+            years=args.years,
+            degree=args.degree or "",
+            title=args.title or "",
+            level=args.level or "",
+        )
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0 if out.get("accepted") else 2
+    if action == "dossier":
+        out = build_dossier(
+            root,
+            company=args.company or "",
+            title=args.title or "",
+            job_id=args.job_id,
+            years=args.years,
+            degree=args.degree or "",
+            claimed_salary=args.claimed,
+            live=bool(args.live),
+            accept_tos_risk=bool(args.i_accept_tos_risk),
+            min_sources=args.min_sources or 2,
+        )
+        # slim stdout
+        slim = {
+            "summary": out.get("summary"),
+            "path": out.get("path"),
+            "md": out.get("md"),
+            "rejected_salary_samples": out.get("rejected_salary_samples"),
+        }
+        print(json.dumps(slim, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_comp(args) -> int:
+    from .comp_bench import coach_script, lookup_comp, lookup_comp_merged
+
+    root = _root(args)
+    action = getattr(args, "comp_action", "lookup")
+    if action == "ingest-live":
+        from .comp_live import ingest_live_file
+
+        out = ingest_live_file(root, args.file, source=args.source or "offershow_capture")
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "refresh":
+        from .comp_live import live_lookup
+
+        srcs = [s.strip() for s in (args.sources or "offershow,http,jobs").split(",") if s.strip()]
+        out = live_lookup(
+            root,
+            query=args.query or args.title or "",
+            title=args.title or "",
+            company=args.company or "",
+            location=args.location or "",
+            level=args.level or "",
+            sources=srcs,
+            accept_tos_risk=bool(args.i_accept_tos_risk),
+            use_cache=False,
+        )
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    # lookup
+    if getattr(args, "live", False):
+        srcs = None
+        if getattr(args, "sources", None):
+            srcs = [s.strip() for s in args.sources.split(",") if s.strip()]
+        out = lookup_comp_merged(
+            root,
+            title=args.title or "",
+            level=args.level or "",
+            location=args.location or "",
+            company=getattr(args, "company", None) or "",
+            query=getattr(args, "query", None) or "",
+            limit=args.limit or 10,
+            live=True,
+            sources=srcs,
+            accept_tos_risk=bool(getattr(args, "i_accept_tos_risk", False)),
+        )
+    else:
+        out = lookup_comp(
+            root,
+            title=args.title or getattr(args, "query", None) or "",
+            level=args.level or "",
+            location=args.location or "",
+            limit=args.limit or 10,
+        )
     out["coach"] = coach_script(out, your_cash=args.cash)
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
@@ -1129,14 +1247,32 @@ def build_parser() -> argparse.ArgumentParser:
     mx.set_defaults(func=cmd_match_explain)
 
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
-    d.add_argument("--source", choices=("paste", "rss", "career", "ats"), required=True)
+    d.add_argument(
+        "--source",
+        choices=("paste", "rss", "career", "ats", "companies"),
+        required=True,
+    )
     d.add_argument("--text", default=None)
     d.add_argument("--text-file", default=None)
     d.add_argument("--url", default=None)
-    d.add_argument("--board", default=None, help="ats board spec e.g. greenhouse:acme")
     d.add_argument("--job-id", default=None)
+    d.add_argument("--board", default=None, help="greenhouse:slug | lever:slug | ashby:slug")
+    d.add_argument("--keyword", default=None, help="for --source companies")
+    d.add_argument("--location", default=None)
+    d.add_argument("--no-match", action="store_true")
+    d.add_argument("--workers", type=int, default=4)
     d.add_argument("--limit", type=int, default=10)
     d.set_defaults(func=cmd_discover)
+
+    rec = sub.add_parser("recommend", parents=[parent], help="crawl company career/ATS → ranked jobs")
+    rec_sub = rec.add_subparsers(dest="recommend_action", required=True)
+    rec_j = rec_sub.add_parser("jobs", help="official career pages + public ATS boards")
+    rec_j.add_argument("--keyword", default=None)
+    rec_j.add_argument("--location", default=None)
+    rec_j.add_argument("--limit", type=int, default=20)
+    rec_j.add_argument("--workers", type=int, default=4)
+    rec_j.add_argument("--no-match", action="store_true")
+    rec_j.set_defaults(func=cmd_recommend)
 
     gr = sub.add_parser("grade", parents=[parent], help="A-F / 100-pt grade for a matched job")
     gr.add_argument("--job-id", required=True)
@@ -1243,15 +1379,55 @@ def build_parser() -> argparse.ArgumentParser:
     tr_g.add_argument("--stage", type=int, required=True)
     tr_g.set_defaults(func=cmd_train)
 
-    cmp_ = sub.add_parser("comp", parents=[parent], help="local compensation benchmarks")
+    cmp_ = sub.add_parser("comp", parents=[parent], help="compensation benchmarks + live OfferShow")
     cmp_sub = cmp_.add_subparsers(dest="comp_action", required=True)
     cmp_l = cmp_sub.add_parser("lookup")
     cmp_l.add_argument("--title", default="")
+    cmp_l.add_argument("--query", default="")
+    cmp_l.add_argument("--company", default="")
     cmp_l.add_argument("--level", default="")
     cmp_l.add_argument("--location", default="")
     cmp_l.add_argument("--cash", type=float, default=None)
     cmp_l.add_argument("--limit", type=int, default=10)
+    cmp_l.add_argument("--live", action="store_true", help="query live sources (OfferShow API / JD / cache)")
+    cmp_l.add_argument("--sources", default=None, help="comma: offershow,http,levels,jobs,career,extra,cache")
+    cmp_l.add_argument("--i-accept-tos-risk", action="store_true")
     cmp_l.set_defaults(func=cmd_comp)
+    cmp_r = cmp_sub.add_parser("refresh", help="force live fetch → cache")
+    cmp_r.add_argument("--query", default="")
+    cmp_r.add_argument("--title", default="")
+    cmp_r.add_argument("--company", default="")
+    cmp_r.add_argument("--level", default="")
+    cmp_r.add_argument("--location", default="")
+    cmp_r.add_argument("--sources", default="offershow,http,levels,jobs,career")
+    cmp_r.add_argument("--i-accept-tos-risk", action="store_true")
+    cmp_r.set_defaults(func=cmd_comp)
+    cmp_i = cmp_sub.add_parser("ingest-live", help="import OfferShow/Levels capture JSON/JSONL/CSV")
+    cmp_i.add_argument("--file", required=True)
+    cmp_i.add_argument("--source", default="offershow_capture")
+    cmp_i.set_defaults(func=cmd_comp)
+
+    intel = sub.add_parser("intel", parents=[parent], help="multi-source job intel + rumor filter")
+    intel_sub = intel.add_subparsers(dest="intel_action", required=True)
+    iv = intel_sub.add_parser("verify-salary", help="reject implausible pay claims")
+    iv.add_argument("--claimed", required=True, help="e.g. 年薪1000万 or 500000")
+    iv.add_argument("--years", type=float, default=None)
+    iv.add_argument("--degree", default="")
+    iv.add_argument("--title", default="")
+    iv.add_argument("--level", default="")
+    iv.set_defaults(func=cmd_intel)
+    idos = intel_sub.add_parser("dossier", help="corroborated posting/pay/hours/reputation/landing")
+    idos.add_argument("--company", default="")
+    idos.add_argument("--title", default="")
+    idos.add_argument("--job-id", default=None)
+    idos.add_argument("--years", type=float, default=None)
+    idos.add_argument("--degree", default="")
+    idos.add_argument("--claimed", default=None, help="optional rumor salary to test")
+    idos.add_argument("--live", action="store_true")
+    idos.add_argument("--i-accept-tos-risk", action="store_true")
+    idos.add_argument("--min-sources", type=int, default=2)
+    idos.set_defaults(func=cmd_intel)
+
 
     rp = sub.add_parser("resume-pick", parents=[parent], help="Pick Don't Edit resume bullets")
     rp_sub = rp.add_subparsers(dest="resume_pick_action", required=True)

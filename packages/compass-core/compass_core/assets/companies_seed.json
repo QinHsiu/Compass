@@ -1,0 +1,52 @@
+{
+  "companies": [
+    {
+      "name": "OpenAI",
+      "ats": "greenhouse:openai",
+      "career_url": "https://openai.com/careers",
+      "tags": ["ai", "ml"]
+    },
+    {
+      "name": "Anthropic",
+      "ats": "greenhouse:anthropic",
+      "career_url": "https://www.anthropic.com/careers",
+      "tags": ["ai"]
+    },
+    {
+      "name": "Stripe",
+      "ats": "greenhouse:stripe",
+      "career_url": "https://stripe.com/jobs",
+      "tags": ["fintech"]
+    },
+    {
+      "name": "Notion",
+      "ats": "ashby:notion",
+      "career_url": "https://www.notion.so/careers",
+      "tags": ["saas"]
+    },
+    {
+      "name": "Databricks",
+      "ats": "greenhouse:databricks",
+      "career_url": "https://www.databricks.com/company/careers",
+      "tags": ["data", "ml"]
+    },
+    {
+      "name": "ByteDance",
+      "career_url": "https://jobs.bytedance.com/",
+      "tags": ["cn", "ml"],
+      "location": "China"
+    },
+    {
+      "name": "Tencent",
+      "career_url": "https://careers.tencent.com/",
+      "tags": ["cn"],
+      "location": "China"
+    },
+    {
+      "name": "Alibaba",
+      "career_url": "https://talent.alibaba.com/",
+      "tags": ["cn"],
+      "location": "China"
+    }
+  ]
+}
