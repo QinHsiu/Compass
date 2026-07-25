@@ -383,8 +383,19 @@ def cmd_anki(args) -> int:
 
 
 def cmd_experience(args) -> int:
-    from .experience_bank import search_experience
+    from .experience_bank import complete_experience, search_experience
 
+    action = getattr(args, "experience_action", "search")
+    if action == "complete":
+        hits = complete_experience(
+            query=getattr(args, "query", None),
+            company=getattr(args, "company", None),
+            topic=getattr(args, "topic", None),
+            limit=getattr(args, "limit", 10) or 10,
+            id=getattr(args, "id", None),
+        )
+        print(json.dumps(hits, ensure_ascii=False, indent=2))
+        return 0
     hits = search_experience(
         query=getattr(args, "query", None),
         company=getattr(args, "company", None),
@@ -392,6 +403,114 @@ def cmd_experience(args) -> int:
         limit=getattr(args, "limit", 10) or 10,
     )
     print(json.dumps(hits, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_train(args) -> int:
+    from .train import train_advance, train_complete, train_goto, train_next, train_status
+
+    root = _root(args)
+    job_id = args.job_id
+    action = args.train_action
+    if action == "status":
+        print(json.dumps(train_status(root, job_id), ensure_ascii=False, indent=2))
+        return 0
+    if action == "next":
+        print(json.dumps(train_next(root, job_id), ensure_ascii=False, indent=2))
+        return 0
+    if action == "complete":
+        print(json.dumps(train_complete(root, job_id, note=args.note or ""), ensure_ascii=False, indent=2))
+        return 0
+    if action == "advance":
+        print(json.dumps(train_advance(root, job_id), ensure_ascii=False, indent=2))
+        return 0
+    if action == "goto":
+        print(json.dumps(train_goto(root, job_id, args.stage), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_comp(args) -> int:
+    from .comp_bench import coach_script, lookup_comp
+
+    root = _root(args)
+    out = lookup_comp(
+        root,
+        title=args.title or "",
+        level=args.level or "",
+        location=args.location or "",
+        limit=args.limit or 10,
+    )
+    out["coach"] = coach_script(out, your_cash=args.cash)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_resume_pick(args) -> int:
+    from .resume_pick import apply_picks, list_pickable_bullets
+
+    root = _root(args)
+    action = args.resume_pick_action
+    if action == "list":
+        items = list_pickable_bullets(root, args.job_id)
+        slim = [
+            {"pick_id": i["pick_id"], "jd_hits": i.get("jd_hits"), "text": (i.get("text") or "")[:120], "title": i.get("title")}
+            for i in items[: args.limit or 40]
+        ]
+        print(json.dumps(slim, ensure_ascii=False, indent=2))
+        return 0
+    if action == "apply":
+        ids = [x.strip() for x in (args.picks or "").split(",") if x.strip()]
+        if args.picks_file:
+            raw = Path(args.picks_file).read_text(encoding="utf-8")
+            try:
+                data = json.loads(raw)
+                ids = data if isinstance(data, list) else data.get("pick_ids") or ids
+            except json.JSONDecodeError:
+                ids = [ln.strip() for ln in raw.splitlines() if ln.strip() and not ln.startswith("#")]
+        if not ids:
+            print(json.dumps({"error": "need --picks or --picks-file"}, ensure_ascii=False))
+            return 1
+        out = apply_picks(root, ids, job_id=args.job_id, name=args.name or "")
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_pipeline(args) -> int:
+    root = _root(args)
+    if getattr(args, "pipeline_action", None) == "board":
+        from .pipeline_board import format_pipeline_board, pipeline_board
+
+        data = pipeline_board(root)
+        print(format_pipeline_board(data))
+        if getattr(args, "as_json", False):
+            print(json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    if not getattr(args, "text_file", None):
+        print(json.dumps({"error": "need pipeline board | --text-file"}, ensure_ascii=False))
+        return 1
+    text = Path(args.text_file).read_text(encoding="utf-8")
+    m = match_and_save(root, text)
+    r = apply_and_save(root, m.job_id)
+    i = interview_and_save(root, m.job_id)
+    d = diagnose_and_save(root, m.job_id)
+    print(
+        json.dumps(
+            {
+                "steps": 4,
+                "job_id": m.job_id,
+                "score": m.score,
+                "resume_ops": r["ops"],
+                "interview": i["path"],
+                "diagnose": d["path"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -486,6 +605,15 @@ def cmd_storybank(args) -> int:
     if action == "recommend":
         hits = recommend_stories(root, job_id=args.job_id, limit=args.limit or 5)
         print(json.dumps(hits, ensure_ascii=False, indent=2))
+        return 0
+    if action == "compose":
+        from .story_compose import compose_stories
+
+        if not args.job_id:
+            print(json.dumps({"error": "compose needs --job-id"}, ensure_ascii=False))
+            return 1
+        out = compose_stories(root, args.job_id, limit=args.limit or 5)
+        print(json.dumps({k: out[k] for k in out if k != "stories"}, ensure_ascii=False, indent=2))
         return 0
     print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
     return 1
@@ -923,30 +1051,6 @@ def cmd_desk(args) -> int:
     return 0
 
 
-def cmd_pipeline(args) -> int:
-    root = _root(args)
-    text = Path(args.text_file).read_text(encoding="utf-8")
-    m = match_and_save(root, text)
-    r = apply_and_save(root, m.job_id)
-    i = interview_and_save(root, m.job_id)
-    d = diagnose_and_save(root, m.job_id)
-    print(
-        json.dumps(
-            {
-                "steps": 4,
-                "job_id": m.job_id,
-                "score": m.score,
-                "resume_ops": r["ops"],
-                "interview": i["path"],
-                "diagnose": d["path"],
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
-    return 0
-
-
 def cmd_life(args) -> int:
     from .life import answer_life, explore_life, export_life_html, load_life_report, refine_plan
 
@@ -1116,6 +1220,51 @@ def build_parser() -> argparse.ArgumentParser:
     exp_s.add_argument("--topic", default=None)
     exp_s.add_argument("--limit", type=int, default=10)
     exp_s.set_defaults(func=cmd_experience)
+    exp_c = exp_sub.add_parser("complete", help="template-complete answer points")
+    exp_c.add_argument("--query", default=None)
+    exp_c.add_argument("--company", default=None)
+    exp_c.add_argument("--topic", default=None)
+    exp_c.add_argument("--id", default=None)
+    exp_c.add_argument("--limit", type=int, default=10)
+    exp_c.set_defaults(func=cmd_experience)
+
+    tr = sub.add_parser("train", parents=[parent], help="8-stage progressive interview training")
+    tr_sub = tr.add_subparsers(dest="train_action", required=True)
+    for name in ("status", "next", "advance"):
+        p_tr = tr_sub.add_parser(name)
+        p_tr.add_argument("--job-id", required=True)
+        p_tr.set_defaults(func=cmd_train)
+    tr_c = tr_sub.add_parser("complete")
+    tr_c.add_argument("--job-id", required=True)
+    tr_c.add_argument("--note", default="")
+    tr_c.set_defaults(func=cmd_train)
+    tr_g = tr_sub.add_parser("goto")
+    tr_g.add_argument("--job-id", required=True)
+    tr_g.add_argument("--stage", type=int, required=True)
+    tr_g.set_defaults(func=cmd_train)
+
+    cmp_ = sub.add_parser("comp", parents=[parent], help="local compensation benchmarks")
+    cmp_sub = cmp_.add_subparsers(dest="comp_action", required=True)
+    cmp_l = cmp_sub.add_parser("lookup")
+    cmp_l.add_argument("--title", default="")
+    cmp_l.add_argument("--level", default="")
+    cmp_l.add_argument("--location", default="")
+    cmp_l.add_argument("--cash", type=float, default=None)
+    cmp_l.add_argument("--limit", type=int, default=10)
+    cmp_l.set_defaults(func=cmd_comp)
+
+    rp = sub.add_parser("resume-pick", parents=[parent], help="Pick Don't Edit resume bullets")
+    rp_sub = rp.add_subparsers(dest="resume_pick_action", required=True)
+    rp_l = rp_sub.add_parser("list")
+    rp_l.add_argument("--job-id", required=True)
+    rp_l.add_argument("--limit", type=int, default=40)
+    rp_l.set_defaults(func=cmd_resume_pick)
+    rp_a = rp_sub.add_parser("apply")
+    rp_a.add_argument("--job-id", required=True)
+    rp_a.add_argument("--picks", default=None, help="comma-separated pick_ids")
+    rp_a.add_argument("--picks-file", default=None)
+    rp_a.add_argument("--name", default="")
+    rp_a.set_defaults(func=cmd_resume_pick)
 
     sess = sub.add_parser("session", parents=[parent], help="auth session vault (opt-in)")
     sess_sub = sess.add_subparsers(dest="session_action", required=True)
@@ -1162,6 +1311,10 @@ def build_parser() -> argparse.ArgumentParser:
     sb_rec.add_argument("--job-id", default=None)
     sb_rec.add_argument("--limit", type=int, default=5)
     sb_rec.set_defaults(func=cmd_storybank)
+    sb_co = sb_sub.add_parser("compose", help="optimize story combo for JD coverage")
+    sb_co.add_argument("--job-id", required=True)
+    sb_co.add_argument("--limit", type=int, default=5)
+    sb_co.set_defaults(func=cmd_storybank)
 
     ti = sub.add_parser("transcript-import", parents=[parent], help="import Otter/Zoom-like transcript")
     ti.add_argument("--job-id", required=True)
@@ -1329,10 +1482,14 @@ def build_parser() -> argparse.ArgumentParser:
     crawl.set_defaults(func=cmd_crawl_llm)
 
     pipe = sub.add_parser(
-        "pipeline", parents=[parent], help="4-step demo: discover→resume→interview→diagnose"
+        "pipeline", parents=[parent], help="demo pipeline or board TUI"
     )
-    pipe.add_argument("--text-file", required=True)
+    pipe.add_argument("--text-file", default=None)
     pipe.set_defaults(func=cmd_pipeline)
+    pipe_sub = pipe.add_subparsers(dest="pipeline_action", required=False)
+    pipe_b = pipe_sub.add_parser("board", help="terminal pipeline dashboard")
+    pipe_b.add_argument("--json", dest="as_json", action="store_true")
+    pipe_b.set_defaults(func=cmd_pipeline)
 
     life = sub.add_parser("life", parents=[parent], help="interest explore → career plan (/life)")
     life_sub = life.add_subparsers(dest="life_action", required=True)

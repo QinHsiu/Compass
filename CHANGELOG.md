@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 — 2026-07-25
+
+compas.txt「核心能力短板」真增量（文中 P0/P1 多为陈旧标注，已在 v0.8–0.13）：
+
+- **train**: 8-stage progressive curriculum (`train status|next|complete|advance|goto`)
+- **storybank compose**: JD token set-cover story combo
+- **comp lookup**: local benchmarks + coach line; MCP `comp_lookup`
+- **pipeline board**: terminal Dashboard TUI-lite
+- **resume-pick**: Pick Don't Edit bullet selection
+- **experience complete**: template standard-answer autocomplete
+
 ## 0.13.0 — 2026-07-25
 
 Enterprise-light APM on top of local obs:

@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.13.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.14.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)

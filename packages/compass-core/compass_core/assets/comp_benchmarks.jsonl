@@ -1,0 +1,8 @@
+{"title": "ML Platform Engineer", "family": "ml", "level": "L5/E5", "location": "Shanghai", "currency": "CNY", "p25": 450000, "p50": 580000, "p75": 720000, "tags": ["llm", "platform"]}
+{"title": "ML Platform Engineer", "family": "ml", "level": "L5/E5", "location": "Beijing", "currency": "CNY", "p25": 480000, "p50": 620000, "p75": 780000, "tags": ["llm"]}
+{"title": "Applied Scientist", "family": "ml", "level": "senior", "location": "Remote-CN", "currency": "CNY", "p25": 400000, "p50": 520000, "p75": 680000, "tags": ["research", "rag"]}
+{"title": "Backend Engineer", "family": "swe", "level": "L4", "location": "Shanghai", "currency": "CNY", "p25": 320000, "p50": 400000, "p75": 500000, "tags": ["python", "java"]}
+{"title": "Software Engineer", "family": "swe", "level": "L5", "location": "SF Bay", "currency": "USD", "p25": 180000, "p50": 220000, "p75": 280000, "tags": ["backend"]}
+{"title": "SFT / LLM Application", "family": "ml", "level": "mid-senior", "location": "Hangzhou", "currency": "CNY", "p25": 380000, "p50": 500000, "p75": 650000, "tags": ["sft", "agent"]}
+{"title": "Data Engineer", "family": "data", "level": "senior", "location": "Shanghai", "currency": "CNY", "p25": 350000, "p50": 450000, "p75": 560000, "tags": ["spark"]}
+{"title": "Engineering Manager", "family": "mgmt", "level": "M1", "location": "Beijing", "currency": "CNY", "p25": 600000, "p50": 780000, "p75": 950000, "tags": ["people"]}

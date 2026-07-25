@@ -220,6 +220,19 @@ Latest matrix still marked scout/grade/story/calibrate as missing — those ship
 | 十万岗 | local warehouse FTS + MCP |
 | Enterprise APM | spans / prom / slo |
 
+## Learned from compas.txt core-gap refresh (v0.14.0)
+
+Analysis matrix still marks batch/transcript/report/obs as ❌ — **stale vs v0.10–0.13**. True narrative gaps closed:
+
+| Item | Adaptation |
+|:-----|:-----------|
+| 8-stage training | `train` curriculum |
+| Story combo optimize | `storybank compose` |
+| Dashboard TUI | `pipeline board` |
+| Comp benchmarks | `comp lookup` + MCP |
+| Pick Don't Edit | `resume-pick` |
+| 面经标准答案补全 | `experience complete` |
+
 ## Out of scope (intentional)
 
 | Item | Why |
