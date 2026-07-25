@@ -1,0 +1,8 @@
+{"id": "exp_ml_sys_01", "company": ["generic_bigtech"], "topic": "ml_system", "level": "L5", "tags": ["rag", "latency"], "q": "如何设计一个低延迟的 RAG 检索服务？", "answer_points": ["分层缓存 embedding/结果", "ANN 索引选型与召回/精度权衡", "用证据说明你压过的 P99"]}
+{"id": "exp_beh_01", "company": ["generic"], "topic": "behavioral", "level": "mid", "tags": ["conflict", "star"], "q": "讲一次和产品意见冲突但最终达成共识的经历。", "answer_points": ["Situation 量化影响", "你推动的决策标准", "Result 指标与复盘"]}
+{"id": "exp_llm_01", "company": ["bytedance", "generic"], "topic": "llm", "level": "senior", "tags": ["sft", "eval"], "q": "SFT 数据质量如何评估？线上不好用怎么归因？", "answer_points": ["离线指标 vs 人工偏好", "坏例聚类", "训练/推理/产品哪一层问题"]}
+{"id": "exp_algo_01", "company": ["alibaba", "generic"], "topic": "coding", "level": "mid", "tags": ["python", "concurrency"], "q": "用 Python 实现有界并发的任务池并说明背压。", "answer_points": ["semaphore/queue", "失败重试与超时", "可观测：inflight/queue depth"]}
+{"id": "exp_offer_01", "company": ["generic"], "topic": "offer", "level": "any", "tags": ["comp"], "q": "对方压价时你如何准备谈判材料？", "answer_points": ["市场分位自填对照", "非现金条款清单", "BATNA 与时间线"]}
+{"id": "exp_agent_01", "company": ["tencent", "generic"], "topic": "agent", "level": "senior", "tags": ["tooluse", "eval"], "q": "Agent 工具调用失败率高，你会怎么排查？", "answer_points": ["schema/权限/超时分层", "轨迹回放", "用 gate 证据证明改动有效"]}
+{"id": "exp_ds_01", "company": ["meta", "generic"], "topic": "system_design", "level": "L5", "tags": ["feature_store"], "q": "在线特征与离线特征一致性如何保证？", "answer_points": ["point-in-time join", "版本化特征", "监控 skew"]}
+{"id": "exp_cn_01", "company": ["generic_cn"], "topic": "hr", "level": "any", "tags": ["motivation"], "q": "为什么离开上一家？如何避免负向表述？", "answer_points": ["成长/赛道对齐", "不贬低前东家", "与目标岗关键词挂钩"]}

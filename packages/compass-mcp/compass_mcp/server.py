@@ -65,6 +65,29 @@ def tool_overview() -> dict:
     }
 
 
+def tool_jobs_search(q: str = "", location: str = "", limit: int = 20) -> dict:
+    """Search local job warehouse (Four-Leaf / clover-style local index)."""
+    from compass_core.warehouse import search_jobs, warehouse_stats
+
+    root = _root()
+    hits = search_jobs(root, q or "", location=location or None, limit=limit or 20)
+    return {"stats": warehouse_stats(root), "hits": hits}
+
+
+def tool_jobs_get(job_id: str) -> dict:
+    from compass_core.warehouse import search_jobs
+
+    root = _root()
+    # exact id lookup via filter
+    for row in search_jobs(root, "", limit=200):
+        if row.get("job_id") == job_id:
+            return row
+    path = root / "jobs" / job_id / "match.json"
+    if path.is_file():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {"error": f"missing {job_id}"}
+
+
 def main() -> None:
     try:
         from mcp.server.fastmcp import FastMCP
@@ -104,6 +127,16 @@ def main() -> None:
     def overview() -> str:
         """Vault overview: jobs, evidence count, track."""
         return json.dumps(tool_overview(), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    def jobs_search(q: str = "", location: str = "", limit: int = 20) -> str:
+        """Search local warehouse (100k-ready FTS). Not a hosted clover dump."""
+        return json.dumps(tool_jobs_search(q, location, limit), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    def jobs_get(job_id: str) -> str:
+        """Get one warehouse or matched job by id."""
+        return json.dumps(tool_jobs_get(job_id), ensure_ascii=False, indent=2)
 
     mcp.run()
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.13.0 — 2026-07-25
+
+Enterprise-light APM on top of local obs:
+
+- **spans**: `observability.span` → `logs/spans.jsonl`; optional OTLP/`COMPASS_OTEL`
+- **Prometheus**: `obs export-prom` + Desk `GET /metrics`
+- **SLO**: `obs slo` → `logs/slo.json` (gate_pass / ingest / latency proxy)
+- Docs: `docs/observability.md`
+
+## 0.12.0 — 2026-07-25
+
+Login-session + Four-Leaf-scale local warehouse (opt-in / local-only):
+
+- **session**: `session import|status|scout-html` with `--i-accept-tos-risk`
+- **auth_collect**: JSON-LD / attr HTML list parser + experimental fixtures
+- **warehouse**: SQLite FTS `warehouse ingest|search|seed|stats` (100k-ready)
+- **MCP**: `jobs_search` / `jobs_get` over local warehouse
+- **COMPLIANCE**: default blocklist unchanged; opt-in documented
+
+## 0.11.0 — 2026-07-25
+
+compas P1/P2 polish:
+
+- **transcript**: multi-format detect (otter/zoom/grain/teams/tactiq)
+- **anki export**: TSV/JSON from vault/packs/diagnose
+- **experience bank**: local 面经 seed + `experience search` + pack `experience_hits`
+- **practice Progress**: dimension series in practice_center
+- **obs alerts**: rule engine → `logs/alerts.json`
+- **batch board**: recent batch summary table
+
 ## 0.10.0 — 2026-07-25
 
 compas.txt matrix shortfall patch (analysis was stale vs v0.9):
@@ -35,8 +65,6 @@ compas.txt P0 + P1 + light P2 product gap fills (local-first):
 - **Practice center**: `practice-stats --export` → `reports/practice_center.md`
 - **Negotiate**: local pack (no live salary API); `negotiate`
 - **Calibrate**: `calibrate record|report` practice vs real outcomes
-
-Still out of scope: login scrapers, Four-Leaf live job MCP, cloud registry, enterprise observability.
 
 ## 0.7.8 — 2026-07-25
 

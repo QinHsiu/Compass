@@ -287,30 +287,45 @@ def cmd_resume_import(args) -> int:
 
 
 def cmd_batch_match(args) -> int:
-    from .batch_match import batch_from_ats, batch_from_jobs_file, match_existing_jobs, save_batch
-    from .observability import audit_event
+    from .batch_match import (
+        batch_from_ats,
+        batch_from_jobs_file,
+        format_batch_board,
+        list_batches,
+        match_existing_jobs,
+        save_batch,
+    )
+    from .observability import audit_event, span
 
     root = _root(args)
-    if getattr(args, "jobs", None):
-        rows = batch_from_jobs_file(root, args.jobs, workers=getattr(args, "workers", 5) or 5)
-        label = "url"
-    elif args.from_ats:
-        rows = batch_from_ats(root, args.from_ats, limit=args.limit)
-        label = "ats"
-    elif args.all_jobs:
-        rows = match_existing_jobs(root, workers=args.workers)
-        label = "all"
-    else:
-        print(
-            json.dumps(
-                {"error": "need --jobs urls.txt or --all-jobs or --from-ats greenhouse:slug"},
-                ensure_ascii=False,
+    if getattr(args, "batch_action", None) == "board":
+        rows = list_batches(root, limit=getattr(args, "limit", 20) or 20)
+        print(format_batch_board(rows))
+        print(json.dumps({"count": len(rows), "batches": rows}, ensure_ascii=False, indent=2))
+        return 0
+    with span(root, "batch"):
+        if getattr(args, "jobs", None):
+            rows = batch_from_jobs_file(root, args.jobs, workers=getattr(args, "workers", 5) or 5)
+            label = "url"
+        elif getattr(args, "from_ats", None):
+            rows = batch_from_ats(root, args.from_ats, limit=args.limit)
+            label = "ats"
+        elif getattr(args, "all_jobs", False):
+            rows = match_existing_jobs(root, workers=args.workers)
+            label = "all"
+        else:
+            print(
+                json.dumps(
+                    {
+                        "error": "need batch board | --jobs urls.txt | --all-jobs | --from-ats",
+                    },
+                    ensure_ascii=False,
+                )
             )
-        )
-        return 1
-    summary = save_batch(root, rows, label=label)
-    audit_event(root, "batch", count=len(rows), batch_id=summary.get("batch_id"), label=label)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return 1
+        summary = save_batch(root, rows, label=label)
+        audit_event(root, "batch", count=len(rows), batch_id=summary.get("batch_id"), label=label)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -329,7 +344,7 @@ def cmd_research(args) -> int:
 
 
 def cmd_obs(args) -> int:
-    from .observability import status, tail_audit
+    from .observability import compute_slo, evaluate_alerts, export_prometheus, status, tail_audit
 
     root = _root(args)
     action = args.obs_action
@@ -338,6 +353,97 @@ def cmd_obs(args) -> int:
         return 0
     if action == "tail":
         print(json.dumps(tail_audit(root, n=args.n or 20), ensure_ascii=False, indent=2))
+        return 0
+    if action == "alerts":
+        print(json.dumps(evaluate_alerts(root), ensure_ascii=False, indent=2))
+        return 0
+    if action == "export-prom":
+        text = export_prometheus(root)
+        out = getattr(args, "out", None)
+        if out:
+            Path(out).write_text(text, encoding="utf-8")
+            print(json.dumps({"path": out, "bytes": len(text)}, ensure_ascii=False))
+        else:
+            print(text, end="")
+        return 0
+    if action == "slo":
+        print(json.dumps(compute_slo(root), ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_anki(args) -> int:
+    from .anki_export import export_anki
+
+    root = _root(args)
+    out = export_anki(root, job_id=getattr(args, "job_id", None), label=getattr(args, "label", None))
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_experience(args) -> int:
+    from .experience_bank import search_experience
+
+    hits = search_experience(
+        query=getattr(args, "query", None),
+        company=getattr(args, "company", None),
+        topic=getattr(args, "topic", None),
+        limit=getattr(args, "limit", 10) or 10,
+    )
+    print(json.dumps(hits, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_session(args) -> int:
+    from .auth_session import import_session, session_status
+
+    root = _root(args)
+    action = args.session_action
+    if action == "import":
+        out = import_session(root, args.path, name=args.name or "default")
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "status":
+        print(json.dumps(session_status(root, args.name or "default"), ensure_ascii=False, indent=2))
+        return 0
+    if action == "scout-html":
+        from .auth_collect import scout_auth_html
+
+        out = scout_auth_html(
+            root,
+            fixture=getattr(args, "fixture", None),
+            html=Path(args.file).read_text(encoding="utf-8") if getattr(args, "file", None) else None,
+            accept_tos_risk=bool(getattr(args, "i_accept_tos_risk", False)),
+            list_url=getattr(args, "url", None),
+        )
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
+    return 1
+
+
+def cmd_warehouse(args) -> int:
+    from .observability import span
+    from .warehouse import ingest_jsonl, search_jobs, seed_fixture, warehouse_stats
+
+    root = _root(args)
+    action = args.warehouse_action
+    if action == "stats":
+        print(json.dumps(warehouse_stats(root), ensure_ascii=False, indent=2))
+        return 0
+    if action == "ingest":
+        with span(root, "warehouse_ingest"):
+            out = ingest_jsonl(root, args.file)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if action == "search":
+        hits = search_jobs(root, args.q or "", location=args.location, limit=args.limit or 20)
+        print(json.dumps(hits, ensure_ascii=False, indent=2))
+        return 0
+    if action == "seed":
+        out = seed_fixture(root, n=args.n or 100)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0
     print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
     return 1
@@ -962,26 +1068,86 @@ def build_parser() -> argparse.ArgumentParser:
     bm.add_argument("--workers", type=int, default=5)
     bm.set_defaults(func=cmd_batch_match)
 
-    bat = sub.add_parser("batch", parents=[parent], help="alias: batch --jobs urls.txt (parallel)")
-    bat.add_argument("--jobs", required=True, help="urls.txt / board specs")
+    bat = sub.add_parser("batch", parents=[parent], help="batch --jobs | batch board")
+    bat.add_argument("--jobs", default=None, help="urls.txt / board specs")
     bat.add_argument("--workers", type=int, default=5)
     bat.add_argument("--all-jobs", action="store_true")
     bat.add_argument("--from-ats", default=None)
     bat.add_argument("--limit", type=int, default=10)
     bat.set_defaults(func=cmd_batch_match)
+    bat_sub = bat.add_subparsers(dest="batch_action", required=False)
+    bat_board = bat_sub.add_parser("board", help="recent batch summaries table")
+    bat_board.add_argument("--limit", type=int, default=20)
+    bat_board.set_defaults(func=cmd_batch_match)
 
     res = sub.add_parser("research", parents=[parent], help="company research + contact checklist")
     res.add_argument("--company", default=None)
     res.add_argument("--job-id", default=None)
     res.set_defaults(func=cmd_research)
 
-    ob = sub.add_parser("obs", parents=[parent], help="local audit/metrics observability")
+    ob = sub.add_parser("obs", parents=[parent], help="local audit/metrics/alerts/APM")
     ob_sub = ob.add_subparsers(dest="obs_action", required=True)
     ob_st = ob_sub.add_parser("status")
     ob_st.set_defaults(func=cmd_obs)
     ob_t = ob_sub.add_parser("tail")
     ob_t.add_argument("-n", type=int, default=20)
     ob_t.set_defaults(func=cmd_obs)
+    ob_a = ob_sub.add_parser("alerts", help="evaluate alert rules → logs/alerts.json")
+    ob_a.set_defaults(func=cmd_obs)
+    ob_p = ob_sub.add_parser("export-prom", help="Prometheus text exposition")
+    ob_p.add_argument("--out", default=None)
+    ob_p.set_defaults(func=cmd_obs)
+    ob_slo = ob_sub.add_parser("slo", help="SLO snapshot → logs/slo.json")
+    ob_slo.set_defaults(func=cmd_obs)
+
+    an = sub.add_parser("anki", parents=[parent], help="export Anki TSV/JSON cards")
+    an_sub = an.add_subparsers(dest="anki_action", required=True)
+    an_ex = an_sub.add_parser("export")
+    an_ex.add_argument("--job-id", default=None)
+    an_ex.add_argument("--all", action="store_true")
+    an_ex.add_argument("--label", default=None)
+    an_ex.set_defaults(func=cmd_anki)
+
+    exp = sub.add_parser("experience", parents=[parent], help="search local 面经 bank")
+    exp_sub = exp.add_subparsers(dest="experience_action", required=True)
+    exp_s = exp_sub.add_parser("search")
+    exp_s.add_argument("--query", default=None)
+    exp_s.add_argument("--company", default=None)
+    exp_s.add_argument("--topic", default=None)
+    exp_s.add_argument("--limit", type=int, default=10)
+    exp_s.set_defaults(func=cmd_experience)
+
+    sess = sub.add_parser("session", parents=[parent], help="auth session vault (opt-in)")
+    sess_sub = sess.add_subparsers(dest="session_action", required=True)
+    sess_i = sess_sub.add_parser("import")
+    sess_i.add_argument("--path", required=True)
+    sess_i.add_argument("--name", default="default")
+    sess_i.set_defaults(func=cmd_session)
+    sess_st = sess_sub.add_parser("status")
+    sess_st.add_argument("--name", default="default")
+    sess_st.set_defaults(func=cmd_session)
+    sess_sc = sess_sub.add_parser("scout-html", help="parse list HTML/fixture → warehouse")
+    sess_sc.add_argument("--fixture", default=None)
+    sess_sc.add_argument("--file", default=None)
+    sess_sc.add_argument("--url", default=None)
+    sess_sc.add_argument("--i-accept-tos-risk", action="store_true")
+    sess_sc.set_defaults(func=cmd_session)
+
+    wh = sub.add_parser("warehouse", parents=[parent], help="local job warehouse (100k-ready)")
+    wh_sub = wh.add_subparsers(dest="warehouse_action", required=True)
+    wh_st = wh_sub.add_parser("stats")
+    wh_st.set_defaults(func=cmd_warehouse)
+    wh_in = wh_sub.add_parser("ingest")
+    wh_in.add_argument("--file", required=True, help="JSONL jobs")
+    wh_in.set_defaults(func=cmd_warehouse)
+    wh_se = wh_sub.add_parser("search")
+    wh_se.add_argument("--q", default="")
+    wh_se.add_argument("--location", default=None)
+    wh_se.add_argument("--limit", type=int, default=20)
+    wh_se.set_defaults(func=cmd_warehouse)
+    wh_seed = wh_sub.add_parser("seed", help="synthetic fixture rows")
+    wh_seed.add_argument("-n", type=int, default=100)
+    wh_seed.set_defaults(func=cmd_warehouse)
 
     sb = sub.add_parser("storybank", parents=[parent], help="STAR storybank from evidence")
     sb_sub = sb.add_subparsers(dest="storybank_action", required=True)

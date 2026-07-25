@@ -228,3 +228,53 @@ def batch_from_jobs_file(
         reverse=True,
     )
     return rows
+
+
+def list_batches(root: Path, *, limit: int = 20) -> list[dict]:
+    """Recent batch summaries for `batch board` CLI."""
+    root = Path(root)
+    bdir = root / "batches"
+    if not bdir.is_dir():
+        return []
+    rows = []
+    for d in sorted(bdir.iterdir(), reverse=True):
+        if not d.is_dir():
+            continue
+        sp = d / "summary.json"
+        if not sp.is_file():
+            continue
+        try:
+            s = json.loads(sp.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        jobs = s.get("jobs") or []
+        top = jobs[0] if jobs else {}
+        rows.append(
+            {
+                "batch_id": s.get("batch_id") or d.name,
+                "created_at": s.get("created_at"),
+                "count": s.get("count") or len(jobs),
+                "top_letter": top.get("letter"),
+                "top_score_100": top.get("score_100"),
+                "top_title": top.get("title"),
+                "path": str(sp),
+            }
+        )
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def format_batch_board(rows: list[dict]) -> str:
+    lines = [
+        "| created_at | batch_id | count | top_letter | top_100 | top_title |",
+        "|------------|----------|-------|------------|---------|-----------|",
+    ]
+    for r in rows:
+        lines.append(
+            f"| {r.get('created_at') or '—'} | `{r.get('batch_id')}` | {r.get('count')} | "
+            f"{r.get('top_letter') or '—'} | {r.get('top_score_100') or '—'} | {r.get('top_title') or '—'} |"
+        )
+    if len(lines) == 2:
+        lines.append("| — | _(no batches)_ | 0 | — | — | — |")
+    return "\n".join(lines) + "\n"

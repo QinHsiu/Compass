@@ -179,7 +179,7 @@ Source gap list: `projects/oss_competitors/compas.txt`.
 | P2 light | Negotiate | `negotiate` local templates (**no live salary**) |
 | P2 light | Calibration | `calibrate record|report` |
 
-**Still excluded**: Boss/拉勾 login scrape, Four-Leaf 10万岗/实时薪资, cloud Registry, enterprise monitoring.
+**Opt-in / local (v0.12–0.13)**: auth HTML collect with `--i-accept-tos-risk`; local Job Warehouse + MCP `jobs_search` (not hosted clover dump); Desk `/metrics` + `obs slo` APM export.
 
 ## Learned from compas.txt refresh (v0.9.0)
 
@@ -206,11 +206,27 @@ Latest matrix still marked scout/grade/story/calibrate as missing — those ship
 | Big-tech packs | `company_packs.jsonl` + `--company` |
 | Observability | `obs status\|tail` + audit.jsonl |
 
+## Learned from v0.11–v0.13 execution
+
+| Item | Adaptation |
+|:-----|:-----------|
+| Transcript formats | `detect_format` otter/zoom/grain/teams/tactiq |
+| Anki | `anki export` TSV |
+| 面经 | `experience_bank` + pack inject |
+| Progress curves | practice_center Progress |
+| Alerts | `obs alerts` |
+| batch board | `batch board` |
+| Login-state | `session` + auth_collect (opt-in) |
+| 十万岗 | local warehouse FTS + MCP |
+| Enterprise APM | spans / prom / slo |
+
 ## Out of scope (intentional)
 
 | Item | Why |
 |:-----|:----|
 | Camera proctoring | Privacy / job-seeker positioning |
+| Hosted 18万岗 SaaS | Local warehouse instead |
+| Credential stuffing / captcha farms | Compliance |
 | Enterprise recruiter SaaS | Dilutes focus |
 | LoRA fine-tune | Ops + compliance cost |
 | LangGraph rewrite | `next_followup` suffices |

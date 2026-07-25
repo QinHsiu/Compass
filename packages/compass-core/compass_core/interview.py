@@ -70,8 +70,13 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         stories = top_stories(root, limit=5, skills=jd.keywords)
 
     from .company_pack import search_company_pack
+    from .experience_bank import search_experience
 
     company_pack_hits = search_company_pack(jd.company, title=jd.title, limit=6)
+    q_blob = " ".join((jd.keywords or [])[:8]) or (jd.title or "")
+    experience_hits = search_experience(
+        query=q_blob, company=jd.company, limit=6
+    )
 
     pack = {
         "job_id": job_id,
@@ -92,6 +97,7 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "stories": stories,
         "grade": match.grade,
         "company_pack_hits": company_pack_hits,
+        "experience_hits": experience_hits,
     }
     from .retracted import collect_retracted_claims
 
@@ -192,6 +198,10 @@ def render_session(pack: dict) -> str:
     for h in (pack.get("company_pack_hits") or [])[:5]:
         pack_q.append(f"- `{h.get('id')}` {h.get('q')}")
     company_block = "\n".join(pack_q) or "- _(no company pack match)_"
+    exp_q = []
+    for h in (pack.get("experience_hits") or [])[:5]:
+        exp_q.append(f"- `{h.get('id')}` {h.get('q')}")
+    experience_block = "\n".join(exp_q) or "- _(no experience bank hit)_"
 
     return f"""# Interview session: {pack['title']} @ {pack['company']}
 
@@ -207,6 +217,10 @@ def render_session(pack: dict) -> str:
 ## Company pack
 
 {company_block}
+
+## Experience bank
+
+{experience_block}
 
 ## Questions
 

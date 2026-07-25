@@ -7,7 +7,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.10.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
+[![version](https://img.shields.io/badge/version-0.13.0-0F766E?style=for-the-badge&labelColor=1A2332)](VERSION)
 [![tests](https://img.shields.io/badge/tests-pytest-0F766E?style=for-the-badge&labelColor=1A2332)](packages/compass-core/tests)
 [![web](https://img.shields.io/badge/UI-WebSocket%20Web-0F766E?style=for-the-badge&labelColor=1A2332)](apps/interview-live)
 [![license](https://img.shields.io/badge/license-MIT-5C6B7A?style=for-the-badge&labelColor=1A2332)](LICENSE)
@@ -174,9 +174,10 @@ docs/                  # 合规 · 竞品 · 迭代计划
 
 ## 合规 / Compliance
 
-- 题库爬取仅限**公开 raw/文档**；拒绝登录招聘站深度抓取。
+- 题库与岗位默认仅限**公开**源；登录态采集需 `--i-accept-tos-risk`（见 COMPLIANCE）。
+- 十万岗对标为**本地** Job Warehouse + MCP `jobs_search`，非托管竞品库。
 - 简历 / 证据 / 画像仅存本地 `content/`，默认不上云、不提交真实经历。
-- 详见 [docs/COMPLIANCE.md](docs/COMPLIANCE.md)。
+- 详见 [docs/COMPLIANCE.md](docs/COMPLIANCE.md) · [docs/observability.md](docs/observability.md)。
 
 ---
 
