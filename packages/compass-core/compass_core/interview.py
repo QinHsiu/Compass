@@ -63,8 +63,11 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
     persona = pick_persona(jd, match.match_explain)
 
     from .storybank import top_stories
+    from .story_vault import recommend_stories
 
-    stories = top_stories(root, limit=5, skills=jd.keywords)
+    stories = recommend_stories(root, job_id=job_id, keywords=jd.keywords, limit=5)
+    if not stories:
+        stories = top_stories(root, limit=5, skills=jd.keywords)
 
     pack = {
         "job_id": job_id,

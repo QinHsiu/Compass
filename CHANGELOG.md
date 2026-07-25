@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 — 2026-07-25
+
+compas.txt refresh — closed-loop automation + quantified outcomes (on top of v0.8.0):
+
+- **scout**: `scout --keyword/--location/--board` → ATS filter + auto match; Web `POST /api/scout`
+- **score_100**: three-part grade (`direct_evidence` / `transferable` / `gap_risk`) → `综合匹配度：78/100（B级）`
+- **calibrate deepen**: `narrative_hits` + band accuracy; `diagnose --calibrate`
+- **offer**: cash/equity/level + user `market_p50` vs_p50 overlay
+- **story vault**: SQLite tags + recommend; scorecard answers upsert; `storybank recommend`
+- **mentor PDF**: `export-report --mentor` → mentor_report.md/.pdf
+
 ## 0.8.0 — 2026-07-25
 
 compas.txt P0 + P1 + light P2 product gap fills (local-first):

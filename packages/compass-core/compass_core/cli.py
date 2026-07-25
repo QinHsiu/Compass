@@ -247,10 +247,32 @@ def cmd_grade(args) -> int:
         skill_gap=mr.skill_gap,
         profile_fit=mr.profile_fit,
         posting_liveness=mr.posting_liveness,
+        match_explain=mr.match_explain,
     )
     data["grade"] = g
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(g, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_scout(args) -> int:
+    from .scout import scout
+
+    root = _root(args)
+    boards = list(args.board or [])
+    try:
+        summary = scout(
+            root,
+            keyword=args.keyword,
+            location=args.location,
+            boards=boards or None,
+            limit=args.limit,
+            match=not args.no_match,
+        )
+    except Exception as e:
+        print(json.dumps({"error": str(e)}, ensure_ascii=False))
+        return 1
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -282,26 +304,42 @@ def cmd_batch_match(args) -> int:
 
 def cmd_storybank(args) -> int:
     from .storybank import load_storybank, rebuild_storybank, top_stories
+    from .story_vault import import_json_storybank, list_stories, recommend_stories
 
     root = _root(args)
     action = args.storybank_action
     if action == "rebuild":
         idx = rebuild_storybank(root)
-        print(json.dumps({"count": idx["count"]}, ensure_ascii=False, indent=2))
+        n = import_json_storybank(root)
+        print(json.dumps({"count": idx["count"], "vault_seeded": n}, ensure_ascii=False, indent=2))
         return 0
     if action == "list":
+        vault = list_stories(root, limit=50)
+        if vault:
+            slim = [
+                {"id": i["id"], "strength": i.get("strength"), "tags": i.get("tags"), "source": i.get("source")}
+                for i in vault
+            ]
+            print(json.dumps(slim, ensure_ascii=False, indent=2))
+            return 0
         idx = load_storybank(root)
         slim = [{"id": i["id"], "title": i.get("title"), "strength": i.get("strength")} for i in (idx.get("items") or [])]
         print(json.dumps(slim, ensure_ascii=False, indent=2))
         return 0
     if action == "show":
-        items = load_storybank(root).get("items") or []
+        items = list_stories(root, limit=200)
         hit = next((i for i in items if i.get("id") == args.id), None)
         if not hit:
-            # try top by skill
+            bank = load_storybank(root).get("items") or []
+            hit = next((i for i in bank if i.get("id") == args.id), None)
+        if not hit:
             hit = (top_stories(root, limit=1) or [None])[0]
         print(json.dumps(hit, ensure_ascii=False, indent=2))
         return 0 if hit else 1
+    if action == "recommend":
+        hits = recommend_stories(root, job_id=args.job_id, limit=args.limit or 5)
+        print(json.dumps(hits, ensure_ascii=False, indent=2))
+        return 0
     print(json.dumps({"error": f"unknown {action}"}, ensure_ascii=False))
     return 1
 
@@ -326,6 +364,16 @@ def cmd_offer(args) -> int:
     action = args.offer_action
     if action == "init":
         o = empty_offer(args.id, title=args.title or "", company=args.company or "")
+        if getattr(args, "cash", None) is not None:
+            o["cash"] = args.cash
+        if getattr(args, "equity", None) is not None:
+            o["equity"] = args.equity
+        if getattr(args, "level", None):
+            o["level"] = args.level
+        if getattr(args, "market_p50", None) is not None:
+            o["market_p50"] = args.market_p50
+        if getattr(args, "job_id", None):
+            o["job_id"] = args.job_id
         path = save_offer(root, o)
         print(json.dumps({"path": str(path), "offer": o}, ensure_ascii=False, indent=2))
         return 0
@@ -501,7 +549,9 @@ def cmd_export_report(args) -> int:
             print("no jobs; pass --job-id", file=sys.stderr)
             return 1
         job_id = jobs[-1].parent.name
-    out = export_report(root, job_id, want_pdf=not args.html_only)
+    out = export_report(
+        root, job_id, want_pdf=not args.html_only, mentor=bool(getattr(args, "mentor", False))
+    )
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
@@ -598,6 +648,10 @@ def cmd_diagnose(args) -> int:
             return 1
         job_id = jobs[-1].parent.name
     out = diagnose_and_save(root, job_id)
+    if getattr(args, "calibrate", False):
+        from .calibrate import calibrate_summary_for_job
+
+        out["calibrate"] = calibrate_summary_for_job(root, job_id)
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
@@ -800,9 +854,26 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--limit", type=int, default=10)
     d.set_defaults(func=cmd_discover)
 
-    gr = sub.add_parser("grade", parents=[parent], help="A-F / 1-5 grade for a matched job")
+    gr = sub.add_parser("grade", parents=[parent], help="A-F / 100-pt grade for a matched job")
     gr.add_argument("--job-id", required=True)
     gr.set_defaults(func=cmd_grade)
+
+    scouting = sub.add_parser(
+        "scout",
+        parents=[parent],
+        help="keyword/location filter over ATS boards → match (discover-and-analyze)",
+    )
+    scouting.add_argument("--keyword", default=None)
+    scouting.add_argument("--location", default=None)
+    scouting.add_argument(
+        "--board",
+        action="append",
+        default=None,
+        help="repeatable: greenhouse:slug",
+    )
+    scouting.add_argument("--limit", type=int, default=10)
+    scouting.add_argument("--no-match", action="store_true", help="list only, skip match_and_save")
+    scouting.set_defaults(func=cmd_scout)
 
     ri = sub.add_parser("resume-import", parents=[parent], help="PDF/text → resume.json")
     ri.add_argument("--file", required=True)
@@ -825,6 +896,10 @@ def build_parser() -> argparse.ArgumentParser:
     sb_s = sb_sub.add_parser("show")
     sb_s.add_argument("--id", default=None)
     sb_s.set_defaults(func=cmd_storybank)
+    sb_rec = sb_sub.add_parser("recommend")
+    sb_rec.add_argument("--job-id", default=None)
+    sb_rec.add_argument("--limit", type=int, default=5)
+    sb_rec.set_defaults(func=cmd_storybank)
 
     ti = sub.add_parser("transcript-import", parents=[parent], help="import Otter/Zoom-like transcript")
     ti.add_argument("--job-id", required=True)
@@ -839,6 +914,11 @@ def build_parser() -> argparse.ArgumentParser:
     of_i.add_argument("--id", required=True)
     of_i.add_argument("--title", default="")
     of_i.add_argument("--company", default="")
+    of_i.add_argument("--job-id", default=None)
+    of_i.add_argument("--cash", type=float, default=None)
+    of_i.add_argument("--equity", type=float, default=None)
+    of_i.add_argument("--level", default="")
+    of_i.add_argument("--market-p50", dest="market_p50", type=float, default=None)
     of_i.set_defaults(func=cmd_offer)
     of_sh = of_sub.add_parser("show")
     of_sh.add_argument("--id", required=True)
@@ -909,6 +989,7 @@ def build_parser() -> argparse.ArgumentParser:
     er = sub.add_parser("export-report", parents=[parent], help="export diagnose/interview HTML(+PDF)")
     er.add_argument("--job-id", default=None)
     er.add_argument("--html-only", action="store_true", help="skip PDF attempt")
+    er.add_argument("--mentor", action="store_true", help="also write mentor_report.md/.pdf")
     er.set_defaults(func=cmd_export_report)
 
     i = sub.add_parser("interview-pack", parents=[parent], help="build interview pack + session")
@@ -957,6 +1038,7 @@ def build_parser() -> argparse.ArgumentParser:
     di = sub.add_parser("diagnose", parents=[parent], help="gap compass report + bridge plan")
     di.add_argument("--job-id", default=None)
     di.add_argument("--fixture", default=None)
+    di.add_argument("--calibrate", action="store_true", help="attach narrative_hits calibrate summary")
     di.set_defaults(func=cmd_diagnose)
 
     t = sub.add_parser("track", parents=[parent], help="update application board")

@@ -181,6 +181,19 @@ Source gap list: `projects/oss_competitors/compas.txt`.
 
 **Still excluded**: Boss/拉勾 login scrape, Four-Leaf 10万岗/实时薪资, cloud Registry, enterprise monitoring.
 
+## Learned from compas.txt refresh (v0.9.0)
+
+New analysis still labeled ATS/Offer/calibrate as “blank”; v0.8 already had skeletons. v0.9 closes the **delta**:
+
+| Item | Adaptation |
+|:-----|:-----------|
+| Job Spy UX | `scout --keyword/--location` + `POST /api/scout` |
+| 100-pt evidence score | `grade.parts` + `display`「综合匹配度：N/100（X级）」 |
+| Calibrate narrative | `narrative_hits` + `band_accuracy`; `diagnose --calibrate` |
+| Offer market line | user `market_p50` → vs_p50 高/齐/低（no Level.fyi scrape） |
+| Story Vault | SQLite + tags + `storybank recommend` |
+| Mentor PDF | `export-report --mentor` |
+
 ## Out of scope (intentional)
 
 | Item | Why |

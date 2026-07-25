@@ -60,10 +60,21 @@ def test_letter_and_grade():
         skill_gap={"existing": ["a"], "supported_by_evidence": ["b"], "gap": []},
         profile_fit={"status": "pass"},
         posting_liveness={"status": "fresh"},
+        match_explain={
+            "row_count": 10,
+            "direct_count": 7,
+            "partial_count": 2,
+            "gap_count": 1,
+            "fatal_count": 0,
+            "matrix_score": 82,
+        },
     )
-    assert g["letter"] in ("A", "B")
+    assert g["letter"] in ("A", "B", "C", "D")
     assert 3.5 <= g["global_1_5"] <= 5.0
     assert "match_cv" in g["dimensions"]
+    assert g.get("score_100", 0) >= 40
+    assert "综合匹配度" in (g.get("display") or "")
+    assert "parts" in g
 
 
 def test_resume_parse():

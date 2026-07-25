@@ -14,12 +14,21 @@ def build_negotiate_pack(root: Path, job_id: str | None = None) -> dict:
     constraints = profile.get("constraints") or {}
     salary = constraints.get("salary") or constraints.get("comp") or profile.get("salary_range")
     title = company = ""
+    offer_cash = offer_p50 = None
     if job_id:
         jd_path = root / "jobs" / job_id / "jd.json"
         if jd_path.is_file():
             jd = json.loads(jd_path.read_text(encoding="utf-8"))
             title = jd.get("title") or ""
             company = jd.get("company") or ""
+        from .offer_compare import find_offer_for_job
+
+        offr = find_offer_for_job(root, job_id)
+        if offr:
+            offer_cash = offr.get("cash")
+            offer_p50 = offr.get("market_p50")
+            if offer_cash is not None:
+                salary = salary or offer_cash
 
     red_flags = [
         "只给期权不给现金底薪、且行权/回购条款不透明",
@@ -41,6 +50,11 @@ def build_negotiate_pack(root: Path, job_id: str | None = None) -> dict:
         + "。我很感兴趣，想对齐总包结构后再回复时间表。",
         "基于我当前区间与市场沟通，更合理的现金底薪落在 "
         + (str(salary) if salary else "〔填写你的区间〕")
+        + (
+            f"（你录入的 market_p50={offer_p50}）"
+            if offer_p50 is not None
+            else ""
+        )
         + "；若现金有难度，可否用签字奖/年终保证补齐？",
         "我可以在收到书面总包拆分后 N 个工作日内给出决定，避免口头数字误解。",
     ]

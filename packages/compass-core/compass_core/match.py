@@ -56,6 +56,9 @@ def _empty_grade() -> dict:
         "letter": "F",
         "global_1_5": 1.0,
         "dimensions": {},
+        "parts": {"direct_evidence": 0.0, "transferable": 0.0, "gap_risk": 0.0},
+        "score_100": 0.0,
+        "display": "综合匹配度：0/100（F级）",
         "apply_line": False,
         "verdict": "",
         "coverage": 0.0,
@@ -184,6 +187,7 @@ def match_jd(
         skill_gap=gap.to_dict(),
         profile_fit=fit,
         posting_liveness=liveness,
+        match_explain=explain,
     )
 
     return MatchResult(

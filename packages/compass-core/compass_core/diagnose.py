@@ -162,6 +162,11 @@ def render_report(jd: ParsedJD, match: MatchResult, actions: list[dict]) -> str:
             f" 岗位活跃度 `{lv.get('status')}`"
             f"（ats={lv.get('ats', 'unknown')}；age_days={lv.get('age_days', '—')}）。"
         )
+    gr = match.grade or {}
+    if gr.get("display"):
+        summary += f" {gr['display']}。"
+    elif gr.get("score_100") is not None:
+        summary += f" 综合匹配度：{gr.get('score_100')}/100（{gr.get('letter')}级）。"
     return f"""# Diagnose: {jd.title} @ {jd.company}
 
 **job_id**: `{jd.job_id}`  

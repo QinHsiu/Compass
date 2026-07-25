@@ -224,6 +224,20 @@ def record_answer(
     aggregate(data, matrix=matrix)
     save_scorecard(root, job_id, data)
     sync_session_md(root, job_id, data)
+    if ok or len(answer or "") >= 120:
+        try:
+            from .story_vault import upsert_from_answer
+
+            upsert_from_answer(
+                root,
+                job_id=job_id,
+                turn=int(turn),
+                answer=answer or "",
+                evidence_ids=cited,
+                gate_ok=bool(ok),
+            )
+        except Exception:
+            pass
     return data
 
 

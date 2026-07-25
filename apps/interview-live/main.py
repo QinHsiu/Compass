@@ -167,15 +167,45 @@ def list_jobs():
     jobs = []
     for p in sorted((root / "jobs").glob("*/match.json")):
         m = json.loads(p.read_text(encoding="utf-8"))
+        g = m.get("grade") or {}
         jobs.append(
             {
                 "job_id": m.get("job_id") or p.parent.name,
                 "title": m.get("title"),
                 "company": m.get("company"),
                 "score": m.get("score"),
+                "score_100": g.get("score_100"),
+                "letter": g.get("letter"),
+                "display": g.get("display"),
             }
         )
     return {"jobs": jobs}
+
+
+@app.post("/api/scout")
+async def api_scout(
+    keyword: str = Form(""),
+    location: str = Form(""),
+    board: str = Form(""),
+    limit: int = Form(10),
+):
+    """Keyword/location scout over public ATS boards → match."""
+    from compass_core.scout import scout
+
+    root = _root()
+    boards = [b.strip() for b in board.replace(";", ",").split(",") if b.strip()]
+    try:
+        summary = scout(
+            root,
+            keyword=keyword or None,
+            location=location or None,
+            boards=boards or None,
+            limit=int(limit or 10),
+            match=True,
+        )
+        return summary
+    except Exception as e:
+        return {"error": str(e), "jobs": []}
 
 
 @app.get("/api/job/{job_id}")

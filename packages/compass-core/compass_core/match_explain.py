@@ -242,10 +242,21 @@ def render_match_explain_md(
     if gr:
         dims = gr.get("dimensions") or {}
         dim_line = ", ".join(f"{k}={v}" for k, v in dims.items()) or "—"
+        parts = gr.get("parts") or {}
+        parts_line = (
+            f"direct={parts.get('direct_evidence', '—')} / "
+            f"transferable={parts.get('transferable', '—')} / "
+            f"gap_risk={parts.get('gap_risk', '—')}"
+        )
+        disp = gr.get("display") or (
+            f"综合匹配度：{gr.get('score_100', '—')}/100（{gr.get('letter', '—')}级）"
+        )
         gr_block = (
             f"\n## Grade\n\n"
-            f"**letter**: `{gr.get('letter', '—')}` · **global**: `{gr.get('global_1_5', '—')}/5` · "
-            f"apply_line={gr.get('apply_line')}\n\n"
+            f"**{disp}**\n\n"
+            f"**letter**: `{gr.get('letter', '—')}` · **score_100**: `{gr.get('score_100', '—')}` · "
+            f"**global**: `{gr.get('global_1_5', '—')}/5` · apply_line={gr.get('apply_line')}\n\n"
+            f"parts: {parts_line}\n\n"
             f"{gr.get('verdict') or ''}\n\n"
             f"dimensions: {dim_line}\n"
         )
