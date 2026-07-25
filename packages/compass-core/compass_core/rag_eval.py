@@ -79,3 +79,42 @@ def log_query(root: Path, query: str, hit_ids: list[str], *, backend: str = "") 
             )
             + "\n"
         )
+
+
+def record_eval_metrics(root: Path, summary: dict, *, query_file: str = "") -> None:
+    """Write hit@k into observability metrics + audit (GOOD_FIRST / compass gap)."""
+    from datetime import datetime, timezone
+
+    from .observability import audit_event, inc_metric, load_metrics, metrics_path
+
+    k = int(summary.get("k") or 3)
+    hit = float(summary.get("hit_at_k") or 0.0)
+    n = int(summary.get("n") or 0)
+    hits = int(summary.get("hits") or 0)
+    backend = str(summary.get("backend") or "")
+    try:
+        data = load_metrics(root)
+        gauges = data.setdefault("gauges", {})
+        gauges["rag_hit_at_k"] = hit
+        gauges["rag_eval_k"] = k
+        gauges["rag_eval_n"] = n
+        gauges["rag_eval_hits"] = hits
+        gauges["rag_eval_backend"] = backend
+        data["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        metrics_path(root).write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+    inc_metric(root, "rag_eval_runs", 1)
+    inc_metric(root, "rag_hit_at_k_bp_sum", int(round(hit * 10000)))
+    audit_event(
+        root,
+        "rag_eval",
+        hit_at_k=hit,
+        k=k,
+        n=n,
+        hits=hits,
+        backend=backend,
+        query_file=query_file,
+    )

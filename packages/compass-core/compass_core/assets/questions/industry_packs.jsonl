@@ -1,0 +1,9 @@
+{"id": "ind_tech_01", "industry": "tech", "q": "系统设计：为高并发读写设计一个 feature store，如何保证在线/离线一致性？", "tags": ["system_design", "ml"], "hint": "point-in-time join、版本化特征、skew 监控"}
+{"id": "ind_tech_02", "industry": "tech", "q": "讲一次生产事故：你如何定位、止血、复盘？", "tags": ["bei", "ownership"], "hint": "时间线 + 个人贡献 + 指标与防再发"}
+{"id": "ind_tech_03", "industry": "tech", "q": "RAG 召回差时你如何分层排查？", "tags": ["llm", "rag"], "hint": "数据/索引/提示/评测分层，坏例聚类"}
+{"id": "ind_fin_01", "industry": "finance", "q": "如何向非技术业务解释模型风险与合规边界？", "tags": ["communication"], "hint": "风险分类、审计线索、可回滚策略"}
+{"id": "ind_fin_02", "industry": "finance", "q": "交易/风控系统延迟与正确性冲突时你怎么取舍？", "tags": ["system_design"], "hint": "SLA、降级、对账"}
+{"id": "ind_fin_03", "industry": "finance", "q": "讲一次数据质量问题导致报表偏差的经历。", "tags": ["bei", "data"], "hint": "发现路径、影响面、修复与门禁"}
+{"id": "ind_con_01", "industry": "consulting", "q": "客户只给模糊目标时，你如何结构化问题并推进？", "tags": ["case", "structure"], "hint": "议题树、假设驱动、周会交付物"}
+{"id": "ind_con_02", "industry": "consulting", "q": "利益相关方意见冲突，你如何促成决策？", "tags": ["bei", "stakeholder"], "hint": "决策标准透明、试点证据"}
+{"id": "ind_con_03", "industry": "consulting", "q": "如何在两周内完成可演示的分析与建议？", "tags": ["delivery"], "hint": "范围裁剪、80/20、风险清单"}

@@ -220,13 +220,14 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
   <label><input type="checkbox" id="fEv" checked/> 证据</label>
   <label><input type="checkbox" id="fRe" checked/> 简历</label>
   <label><input type="checkbox" id="fIv" checked/> 面试</label>
+  <label><input type="checkbox" id="fConn"/> 仅显示有边的节点</label>
   <input type="search" id="q" placeholder="搜索 evidence_id / 标题…"/>
 </div>
 <p class="legend muted">
 <span><i class="dot" style="background:#2b6de5"></i>证据</span>
 <span><i class="dot" style="background:#0f766e"></i>简历</span>
 <span><i class="dot" style="background:#b45309"></i>面试</span>
-· 点击节点/边查看详情 · 双击画布清除
+· 点击节点/边查看详情 · 双击画布清除 · 筛选会记住到 localStorage
 </p>
 <div class="wrap">
   <div class="panel">
@@ -250,7 +251,9 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
   var fEv = document.getElementById('fEv');
   var fRe = document.getElementById('fRe');
   var fIv = document.getElementById('fIv');
+  var fConn = document.getElementById('fConn');
   var q = document.getElementById('q');
+  var LS_KEY = 'compass_timeline_filters_v1';
 
   function nodeMap() {{
     var m = {{}};
@@ -258,6 +261,26 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
     return m;
   }}
   var NMAP = nodeMap();
+  var CONNECTED = {{}};
+  (DATA.edges || []).forEach(function(e) {{ CONNECTED[e.from] = true; CONNECTED[e.to] = true; }});
+
+  function loadPrefs() {{
+    try {{
+      var p = JSON.parse(localStorage.getItem(LS_KEY) || '{{}}');
+      if (typeof p.ev === 'boolean') fEv.checked = p.ev;
+      if (typeof p.re === 'boolean') fRe.checked = p.re;
+      if (typeof p.iv === 'boolean') fIv.checked = p.iv;
+      if (typeof p.conn === 'boolean') fConn.checked = p.conn;
+      if (typeof p.q === 'string') q.value = p.q;
+    }} catch (e) {{}}
+  }}
+  function savePrefs() {{
+    try {{
+      localStorage.setItem(LS_KEY, JSON.stringify({{
+        ev: fEv.checked, re: fRe.checked, iv: fIv.checked, conn: fConn.checked, q: q.value || ''
+      }}));
+    }} catch (e) {{}}
+  }}
 
   function typeOn(t) {{
     if (t === 'evidence') return fEv.checked;
@@ -278,6 +301,7 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
       var t = el.getAttribute('data-type');
       var n = NMAP[id] || {{id:id, type:t, label:el.getAttribute('data-label')}};
       var ok = typeOn(t) && matchQ(n);
+      if (fConn.checked && !CONNECTED[id]) ok = false;
       el.classList.toggle('hid', !ok);
       if (ok) vis[id] = true;
     }});
@@ -285,6 +309,7 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
       var f = e.getAttribute('data-from'), t = e.getAttribute('data-to');
       e.classList.toggle('hid', !(vis[f] && vis[t]));
     }});
+    savePrefs();
   }}
   function clearHL() {{
     nodes.forEach(function(n) {{ n.classList.remove('lit','dim'); }});
@@ -355,7 +380,8 @@ svg {{ width:100%; height:auto; max-height:560px; background:linear-gradient(180
   document.getElementById('graph').addEventListener('dblclick', function() {{
     clearHL(); detail.textContent = '点击左侧节点或边，查看 skills 与关联。';
   }});
-  [fEv, fRe, fIv].forEach(function(el) {{ el.addEventListener('change', applyFilter); }});
+  loadPrefs();
+  [fEv, fRe, fIv, fConn].forEach(function(el) {{ el.addEventListener('change', applyFilter); }});
   q.addEventListener('input', applyFilter);
   applyFilter();
 }})();

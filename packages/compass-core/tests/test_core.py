@@ -243,17 +243,35 @@ def test_timeline_interactive_html(root: Path):
     html = render_timeline_html(build_timeline(root, job_id=m.job_id))
     assert 'id="fEv"' in html
     assert 'id="q"' in html
+    assert 'id="fConn"' in html
+    assert "compass_timeline_filters_v1" in html
     assert "节点详情" in html
 
 
 def test_rag_eval_fixtures(root: Path):
-    from compass_core.rag_eval import evaluate_queries, load_queries
+    from compass_core.observability import load_metrics
+    from compass_core.rag_eval import evaluate_queries, load_queries, record_eval_metrics
 
     qpath = FIXTURE / "rag_queries.jsonl"
     assert qpath.is_file()
     out = evaluate_queries(root, load_queries(qpath), k=3, semantic=False)
     assert out["n"] >= 5
     assert "hit_at_k" in out
+    record_eval_metrics(root, out, query_file=str(qpath))
+    metrics = load_metrics(root)
+    assert metrics.get("gauges", {}).get("rag_hit_at_k") == out["hit_at_k"]
+    assert int(metrics.get("counters", {}).get("rag_eval_runs") or 0) >= 1
+
+
+def test_industry_pack():
+    from compass_core.industry_pack import infer_industry, search_industry_pack
+
+    assert infer_industry("Quant Researcher", "brokerage 证券") == "finance"
+    assert infer_industry("Strategy Associate", "McKinsey") == "consulting"
+    assert infer_industry("ML Platform Engineer", "ExampleAI") == "tech"
+    hits = search_industry_pack("tech", limit=3)
+    assert len(hits) >= 3
+    assert hits[0].get("industry") == "tech"
 
 
 def test_rag_fallback(root: Path):

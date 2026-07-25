@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0 — 2026-07-25
+
+Close remaining `compass.txt` / GOOD_FIRST deltas (matrix P0–P2 already shipped ≤0.17):
+
+- **Timeline**: 「仅显示有边的节点」+ filter prefs in `localStorage`
+- **Industry packs**: tech / finance / consulting → `interview-pack` + `questions --industry`
+- **rag-eval → obs**: hit@k gauges in `logs/metrics.json` + audit `rag_eval`; Prom gauges export
+- Docs: COMPETITIVE v0.18 note; GOOD_FIRST #6/#8 marked done; `projects/compass.txt` status table
+
 ## 0.17.0 — 2026-07-25
 
 Multi-source job intel with anti-fabrication filters:

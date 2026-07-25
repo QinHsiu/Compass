@@ -71,11 +71,16 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
 
     from .company_pack import search_company_pack
     from .experience_bank import search_experience
+    from .industry_pack import infer_industry, search_industry_pack
 
     company_pack_hits = search_company_pack(jd.company, title=jd.title, limit=6)
     q_blob = " ".join((jd.keywords or [])[:8]) or (jd.title or "")
     experience_hits = search_experience(
         query=q_blob, company=jd.company, limit=6
+    )
+    industry = infer_industry(jd.title, jd.company, jd.keywords)
+    industry_pack_hits = search_industry_pack(
+        industry, title=jd.title, company=jd.company, keywords=jd.keywords, limit=6
     )
 
     pack = {
@@ -98,6 +103,8 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "grade": match.grade,
         "company_pack_hits": company_pack_hits,
         "experience_hits": experience_hits,
+        "industry": industry,
+        "industry_pack_hits": industry_pack_hits,
     }
     from .retracted import collect_retracted_claims
 
@@ -202,6 +209,11 @@ def render_session(pack: dict) -> str:
     for h in (pack.get("experience_hits") or [])[:5]:
         exp_q.append(f"- `{h.get('id')}` {h.get('q')}")
     experience_block = "\n".join(exp_q) or "- _(no experience bank hit)_"
+    ind_q = []
+    for h in (pack.get("industry_pack_hits") or [])[:5]:
+        ind_q.append(f"- `{h.get('id')}` {h.get('q')}")
+    industry_block = "\n".join(ind_q) or "- _(no industry pack)_"
+    industry_label = pack.get("industry") or "tech"
 
     return f"""# Interview session: {pack['title']} @ {pack['company']}
 
@@ -221,6 +233,10 @@ def render_session(pack: dict) -> str:
 ## Experience bank
 
 {experience_block}
+
+## Industry pack (`{industry_label}`)
+
+{industry_block}
 
 ## Questions
 

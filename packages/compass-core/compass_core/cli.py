@@ -828,11 +828,18 @@ def cmd_questions(args) -> int:
 
     root = _root(args)
     company = getattr(args, "company", None)
+    industry = getattr(args, "industry", None)
     if company:
         from .company_pack import search_company_pack
 
         hits = search_company_pack(company, limit=args.limit)
         print(json.dumps({"backend": "company_pack", "hits": hits}, ensure_ascii=False, indent=2))
+        return 0
+    if industry:
+        from .industry_pack import search_industry_pack
+
+        hits = search_industry_pack(industry, limit=args.limit)
+        print(json.dumps({"backend": "industry_pack", "industry": industry, "hits": hits}, ensure_ascii=False, indent=2))
         return 0
     kws = [k.strip() for k in (args.keywords or "").split(",") if k.strip()]
     topics = infer_topics(kws) if kws else None
@@ -876,7 +883,7 @@ def cmd_rag_index(args) -> int:
 
 
 def cmd_rag_eval(args) -> int:
-    from .rag_eval import evaluate_queries, load_queries
+    from .rag_eval import evaluate_queries, load_queries, record_eval_metrics
 
     root = _root(args)
     qpath = Path(args.query_file) if args.query_file else None
@@ -894,6 +901,10 @@ def cmd_rag_eval(args) -> int:
         return 1
     queries = load_queries(qpath)
     out = evaluate_queries(root, queries, k=args.k, semantic=not args.token)
+    try:
+        record_eval_metrics(root, out, query_file=str(qpath))
+    except Exception:
+        pass
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
 
@@ -1546,6 +1557,7 @@ def build_parser() -> argparse.ArgumentParser:
     qb.add_argument("--query", default="")
     qb.add_argument("--keywords", default="")
     qb.add_argument("--company", default=None, help="company pack e.g. bytedance / 字节")
+    qb.add_argument("--industry", default=None, help="industry pack: tech / finance / consulting")
     qb.add_argument("--limit", type=int, default=12)
     qb.add_argument("--semantic", action="store_true", help="use Chroma RAG when available")
     qb.add_argument("--lang", default="zh", help="ui language for bilingual bank hits (zh/en/ja/es)")

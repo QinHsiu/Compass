@@ -186,7 +186,9 @@ def evaluate_alerts(root: Path) -> dict:
 
 def export_prometheus(root: Path) -> str:
     """Text exposition format for Prometheus scrape / obs export-prom."""
-    counters = load_metrics(root).get("counters") or {}
+    data = load_metrics(root)
+    counters = data.get("counters") or {}
+    gauges = data.get("gauges") or {}
     lines = [
         "# HELP compass_counter Compass local counters",
         "# TYPE compass_counter counter",
@@ -194,6 +196,13 @@ def export_prometheus(root: Path) -> str:
     for k, v in sorted(counters.items()):
         safe = "".join(c if c.isalnum() or c == "_" else "_" for c in str(k))
         lines.append(f'compass_counter{{name="{safe}"}} {int(v)}')
+    if gauges:
+        lines.append("# HELP compass_gauge Compass local gauges")
+        lines.append("# TYPE compass_gauge gauge")
+        for k, v in sorted(gauges.items()):
+            safe = "".join(c if c.isalnum() or c == "_" else "_" for c in str(k))
+            if isinstance(v, (int, float)):
+                lines.append(f'compass_gauge{{name="{safe}"}} {v}')
     spans = 0
     sp = logs_dir(root) / "spans.jsonl"
     if sp.is_file():

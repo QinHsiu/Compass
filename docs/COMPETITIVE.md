@@ -233,7 +233,18 @@ Analysis matrix still marks batch/transcript/report/obs as ❌ — **stale vs v0
 | Pick Don't Edit | `resume-pick` |
 | 面经标准答案补全 | `experience complete` |
 
+## Learned from compass.txt gap refresh (v0.18.0)
+
+`projects/compass.txt` matrix (batch/transcript/experience/practice/obs) is **stale vs ≤0.17**. True deltas closed:
+
+| Item | Adaptation |
+|:-----|:-----------|
+| Timeline UX | 「仅显示有边的节点」+ filter `localStorage` |
+| Industry packs | tech/finance/consulting → pack + `questions --industry` |
+| rag-eval observability | hit@k → metrics gauges + `audit` `rag_eval` |
+
 ## Out of scope (intentional)
+
 
 | Item | Why |
 |:-----|:----|
