@@ -6,15 +6,19 @@
 - CSV / JSON / JSONL job list import into Job Warehouse
 - Public RSS / Atom feeds the user configures
 - Public company career / listing HTML pages (rate-limited, identifiable User-Agent)
-- Public ATS JSON APIs (Greenhouse / Lever / Ashby board slugs)
+- Public ATS JSON APIs (Greenhouse / Lever / Ashby / SmartRecruiters board specs)
+- Public remote job APIs the user opts into (`discover --source feeds`: Remotive / Arbeitnow; configurable `content/feeds.yml`)
 - Local session files the user exports themselves (`session import`)
+- User-exported job-board HTML parsed via `session scout-html --i-accept-tos-risk` (no login automation)
 
 ## Not enabled by default
 
 - Login cookies / CDP automation against major job boards (Boss Zhipin, 拉勾, LinkedIn, …)
-- Bulk scraping behind authentication walls
+- Bulk scraping behind authentication walls (including Boss salary CDP / font bypass)
 - Auto-submit applications
+- Bulk Levels.fyi / OfferShow reverse-engineered crawlers — use user gateway or `comp ingest-live` (see `docs/comp_live.md`)
 - Sending OpenTelemetry traces to a remote endpoint (opt-in via env)
+- Third-party Crawl4AI / JobSpy / Oxylabs as runtime dependencies (patterns may be ported first-party)
 
 ## Opt-in experimental (v0.12+)
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.20.0 — 2026-07-25
+
+JobSpy-style multi discover + stronger export-HTML ingest + Crawl4AI patterns (still no JobSpy/Boss/Crawl4AI deps):
+
+- **`discover --source multi`**: fan-in ats/feeds/companies/career; `--sources` / `--depth`
+- **`session scout-html`**: card/anchor parsers, fit-markdown, content_hash, optional `--match`
+- **Fit markdown + depth crawl**: `html_to_jd_markdown(fit=True)`, `crawl_career_depth` (list→same-host detail)
+- Docs: COMPLIANCE clarifies export-HTML vs CDP
+
+## 0.19.0 — 2026-07-25
+
+First-party crawl patterns from `oss_competitors/crawl.txt` (no Crawl4AI/JobSpy/Boss deps):
+
+- **Career normalizer**: `html_to_jd_markdown` (JSON-LD → clean markdown) wired into `parse_career_page` / `collect_career_html`
+- **Public feeds**: `discover --source feeds` (Remotive / Arbeitnow + `feeds.yml`)
+- **SmartRecruiters**: `ats_scan` board `smartrecruiters:id`
+- **Watchlist**: `watch scan` — companies.yml + portals, URL dedupe vs warehouse, `batches/watch_*/summary.json`
+- **JD red-flags**: `jd-analyze` / `jd-compare` + diagnose inject (黑话/背锅位/伪技术岗)
+- Docs: COMPETITIVE crawl.txt note; COMPLIANCE public feeds / no Boss scrape
+
 ## 0.18.0 — 2026-07-25
 
 Close remaining `compass.txt` / GOOD_FIRST deltas (matrix P0–P2 already shipped ≤0.17):

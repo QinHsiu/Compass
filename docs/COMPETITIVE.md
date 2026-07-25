@@ -243,6 +243,32 @@ Analysis matrix still marks batch/transcript/report/obs as ❌ — **stale vs v0
 | Industry packs | tech/finance/consulting → pack + `questions --industry` |
 | rag-eval observability | hit@k → metrics gauges + `audit` `rag_eval` |
 
+## Learned from crawl.txt (v0.19.0)
+
+Source: `projects/oss_competitors/crawl.txt`. Patterns ported **first-party** (no Crawl4AI/JobSpy/Boss CDP):
+
+| Item | Adaptation |
+|:-----|:-----------|
+| Job Seek / JobSignal watchlist | `watch scan` + warehouse URL dedupe |
+| Crawl4AI HTML→MD | `html_to_jd_markdown` in career_recommend |
+| job_finder remote feeds | `discover --source feeds` (Remotive/Arbeitnow) |
+| pushcv SmartRecruiters | `ats_scan` `smartrecruiters:` |
+| JD Analyzer 红旗 | `jd-analyze` / `jd-compare` + diagnose |
+| levels/OfferShow | existing `comp --live` / `ingest-live` (no new scrape) |
+
+**Not ported**: JobSpy aggregators, Boss CDP, auto-apply, SEC/OSINT graphs, ghleaks, Oxylabs.
+
+## Learned from crawl follow-up (v0.20.0)
+
+User asked to try JobSpy/Boss-style reach + Crawl4AI value — implemented **compliant substitutes only**:
+
+| Ask | Shipped |
+|:----|:--------|
+| JobSpy multi-source | `discover --source multi` (ats/feeds/companies/career) |
+| Board HTML ingest | stronger `session scout-html` (cards/anchors/fit-md/hash) |
+| Crawl4AI extras | fit markdown + `crawl_career_depth` / `--depth 1` |
+| Boss CDP / LinkedIn scrape | still **not** shipped |
+
 ## Out of scope (intentional)
 
 

@@ -154,6 +154,18 @@ def ingest_rows(root: Path, rows: list[dict], *, source: str = "rows") -> dict:
     return {"ingested": n, "path": str(warehouse_path(root))}
 
 
+def existing_urls(root: Path) -> set[str]:
+    """URLs already in warehouse (for watchlist dedupe)."""
+    root = Path(root)
+    urls: set[str] = set()
+    with _conn(root) as con:
+        for row in con.execute("SELECT url FROM jobs WHERE url IS NOT NULL AND url != ''"):
+            u = (row["url"] or "").strip()
+            if u:
+                urls.add(u)
+    return urls
+
+
 def search_jobs(
     root: Path,
     q: str = "",

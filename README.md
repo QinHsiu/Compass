@@ -133,7 +133,7 @@ flowchart LR
 | `/life` | `life explore\|answer\|refine\|export` | 兴趣探索 → 职业规划（RIASEC） |
 | `/intake` | `intake` | 画像 |
 | `/evidence` | `evidence-index` / `gate` | 证据索引 · 声明门禁 |
-| `/discover` | `discover` · `scout` · `batch --jobs` · `skill-gap` · `grade` | ATS/关键词/URL 批处理 · 评分 |
+| `/discover` | `discover` · `scout` · `watch scan` · `batch --jobs` · `skill-gap` · `grade` · `jd-analyze` | ATS/feeds/**multi**/巡检 · 评分 · JD红旗 |
 | `/resume` | `resume-patch` · `resume-metrics` · `resume-import` | 主题 patch · 密度/指标 · PDF 导入 |
 | `/interview` | `interview-pack` · `scorecard` · `questions --company` · `storybank` · `transcript-import` | 面试包 · 根因 · 大厂题包 · 故事库 |
 | `/diagnose` | `diagnose` · `export-report --mentor` · `research` · `calibrate` | 缺口罗盘 · 公司研究 · 校准 |

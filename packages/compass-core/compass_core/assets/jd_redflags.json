@@ -1,0 +1,52 @@
+{
+  "rules": [
+    {
+      "id": "rf_pressure",
+      "category": "dirty_work",
+      "severity": "P1",
+      "patterns": ["抗压", "承受压力", "高压", "加班常态", "996", "大小周"],
+      "label": "高强度/加班暗示",
+      "hint": "追问真实工时与 on-call；对照 intel hours 证据"
+    },
+    {
+      "id": "rf_screw",
+      "category": "scapegoat",
+      "severity": "P0",
+      "patterns": ["螺丝钉", "打杂", "随叫随到", "背锅", "救火", "背责"],
+      "label": "背锅位/杂务风险",
+      "hint": "确认职责边界与晋升路径；写入 retracted / Do not claim"
+    },
+    {
+      "id": "rf_buzz",
+      "category": "buzzword",
+      "priority": "P2",
+      "patterns": ["赋能", "抓手", "闭环", "对齐颗粒度", "打法", "心智"],
+      "label": "黑话/空心表述",
+      "hint": "要求对方用可验证交付物改写 JD 句子"
+    },
+    {
+      "id": "rf_pseudo_tech",
+      "category": "pseudo_tech",
+      "priority": "P1",
+      "patterns": ["懂技术更好", "技术氛围", "参与架构讨论", "不写代码也可"],
+      "label": "伪技术岗信号",
+      "hint": "确认是否写生产代码、是否有 code review / oncall"
+    },
+    {
+      "id": "rf_growth_vague",
+      "category": "prospect",
+      "priority": "P2",
+      "patterns": ["广阔平台", "空间巨大", "快速发展期", "期权丰厚"],
+      "label": "前景空话",
+      "hint": "用 intel dossier / comp 交叉验证，勿单信 JD"
+    },
+    {
+      "id": "rf_owner_dump",
+      "category": "scapegoat",
+      "priority": "P1",
+      "patterns": ["独立负责", "从0到1独自", "无人带", "自我驱动即可"],
+      "label": "孤立交付/缺 mentor",
+      "hint": "问团队规模与 code owner；评估支援"
+    }
+  ]
+}

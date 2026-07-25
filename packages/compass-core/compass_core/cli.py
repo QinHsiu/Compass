@@ -239,8 +239,82 @@ def cmd_discover(args) -> int:
         audit_event(root, "recommend", count=len(out.get("recommended") or []))
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0
+    if args.source == "feeds":
+        from .feeds import collect_feeds
+        from .observability import audit_event
+
+        out = collect_feeds(
+            root,
+            feed=getattr(args, "feed", None),
+            limit=args.limit or 15,
+            match=not getattr(args, "no_match", False),
+        )
+        audit_event(root, "feeds", count=len(out.get("jobs") or []))
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    if args.source == "multi":
+        from .multi_discover import discover_multi
+        from .observability import audit_event, span
+
+        srcs = None
+        if getattr(args, "sources", None):
+            srcs = [s.strip() for s in args.sources.split(",") if s.strip()]
+        with span(root, "discover_multi"):
+            out = discover_multi(
+                root,
+                sources=srcs,
+                keyword=getattr(args, "keyword", None),
+                location=getattr(args, "location", None),
+                board=getattr(args, "board", None),
+                feed=getattr(args, "feed", None),
+                career_url=getattr(args, "url", None),
+                limit=args.limit or 20,
+                match=not getattr(args, "no_match", False),
+                workers=getattr(args, "workers", 4) or 4,
+                depth=int(getattr(args, "depth", 0) or 0),
+            )
+        audit_event(root, "discover_multi", count=out.get("count") or 0)
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
     print(f"unknown source {args.source}", file=sys.stderr)
     return 1
+
+
+def cmd_watch(args) -> int:
+    from .observability import audit_event, span
+    from .watch import watch_scan
+
+    root = _root(args)
+    with span(root, "watch_scan"):
+        out = watch_scan(
+            root,
+            limit=getattr(args, "limit", 30) or 30,
+            match=not getattr(args, "no_match", False),
+            dry_run=bool(getattr(args, "dry_run", False)),
+            workers=getattr(args, "workers", 4) or 4,
+        )
+    audit_event(root, "watch", count=out.get("new") or 0)
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_jd_analyze(args) -> int:
+    from .jd_redflags import analyze_job, compare_jobs
+
+    root = _root(args)
+    action = getattr(args, "jd_action", "analyze")
+    if action == "compare":
+        ids = [x.strip() for x in (args.job_ids or "").split(",") if x.strip()]
+        if len(ids) < 2:
+            print(json.dumps({"error": "need --job-ids a,b"}, ensure_ascii=False))
+            return 1
+        print(json.dumps(compare_jobs(root, ids), ensure_ascii=False, indent=2))
+        return 0
+    if not args.job_id:
+        print(json.dumps({"error": "need --job-id"}, ensure_ascii=False))
+        return 1
+    print(json.dumps(analyze_job(root, args.job_id), ensure_ascii=False, indent=2))
+    return 0
 
 
 def cmd_recommend(args) -> int:
@@ -256,6 +330,7 @@ def cmd_recommend(args) -> int:
             limit=args.limit or 20,
             match=not args.no_match,
             workers=args.workers or 4,
+            depth=int(getattr(args, "depth", 0) or 0),
         )
     audit_event(root, "recommend", count=len(out.get("recommended") or []))
     print(json.dumps(out, ensure_ascii=False, indent=2))
@@ -653,6 +728,8 @@ def cmd_session(args) -> int:
             html=Path(args.file).read_text(encoding="utf-8") if getattr(args, "file", None) else None,
             accept_tos_risk=bool(getattr(args, "i_accept_tos_risk", False)),
             list_url=getattr(args, "url", None),
+            match=bool(getattr(args, "match", False)),
+            limit=int(getattr(args, "limit", 50) or 50),
         )
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0
@@ -1260,20 +1337,52 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("discover", parents=[parent], help="import jobs")
     d.add_argument(
         "--source",
-        choices=("paste", "rss", "career", "ats", "companies"),
+        choices=("paste", "rss", "career", "ats", "companies", "feeds", "multi"),
         required=True,
     )
     d.add_argument("--text", default=None)
     d.add_argument("--text-file", default=None)
-    d.add_argument("--url", default=None)
+    d.add_argument("--url", default=None, help="career list URL (career|multi)")
     d.add_argument("--job-id", default=None)
-    d.add_argument("--board", default=None, help="greenhouse:slug | lever:slug | ashby:slug")
-    d.add_argument("--keyword", default=None, help="for --source companies")
+    d.add_argument(
+        "--board",
+        default=None,
+        help="greenhouse:slug | lever:slug | ashby:slug | smartrecruiters:id",
+    )
+    d.add_argument("--feed", default=None, help="for feeds/multi: remotive|arbeitnow|name from feeds.yml")
+    d.add_argument(
+        "--sources",
+        default=None,
+        help="for --source multi: comma list ats,feeds,companies,career (default all)",
+    )
+    d.add_argument(
+        "--depth",
+        type=int,
+        default=0,
+        help="for multi/career: 0=list only, 1=fetch same-host job detail pages",
+    )
+    d.add_argument("--keyword", default=None, help="for --source companies|multi")
     d.add_argument("--location", default=None)
     d.add_argument("--no-match", action="store_true")
     d.add_argument("--workers", type=int, default=4)
     d.add_argument("--limit", type=int, default=10)
     d.set_defaults(func=cmd_discover)
+
+    wt = sub.add_parser("watch", parents=[parent], help="rescan companies.yml + portals; new jobs only")
+    wt_sub = wt.add_subparsers(dest="watch_action", required=True)
+    wt_s = wt_sub.add_parser("scan", help="watchlist rescan → batches/watch_*/summary.json")
+    wt_s.add_argument("--limit", type=int, default=30)
+    wt_s.add_argument("--no-match", action="store_true")
+    wt_s.add_argument("--dry-run", action="store_true", help="detect new URLs without match/ingest")
+    wt_s.add_argument("--workers", type=int, default=4)
+    wt_s.set_defaults(func=cmd_watch)
+
+    jda = sub.add_parser("jd-analyze", parents=[parent], help="JD red-flags (黑话/背锅位/伪技术岗)")
+    jda.add_argument("--job-id", default=None)
+    jda.set_defaults(func=cmd_jd_analyze, jd_action="analyze")
+    jdc = sub.add_parser("jd-compare", parents=[parent], help="multi-JD grade parts + redflag radar")
+    jdc.add_argument("--job-ids", required=True, help="comma-separated job ids")
+    jdc.set_defaults(func=cmd_jd_analyze, jd_action="compare")
 
     rec = sub.add_parser("recommend", parents=[parent], help="crawl company career/ATS → ranked jobs")
     rec_sub = rec.add_subparsers(dest="recommend_action", required=True)
@@ -1283,6 +1392,7 @@ def build_parser() -> argparse.ArgumentParser:
     rec_j.add_argument("--limit", type=int, default=20)
     rec_j.add_argument("--workers", type=int, default=4)
     rec_j.add_argument("--no-match", action="store_true")
+    rec_j.add_argument("--depth", type=int, default=0, help="1=same-host job detail fetch")
     rec_j.set_defaults(func=cmd_recommend)
 
     gr = sub.add_parser("grade", parents=[parent], help="A-F / 100-pt grade for a matched job")
@@ -1392,7 +1502,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     cmp_ = sub.add_parser("comp", parents=[parent], help="compensation benchmarks + live OfferShow")
     cmp_sub = cmp_.add_subparsers(dest="comp_action", required=True)
-    cmp_l = cmp_sub.add_parser("lookup")
+    cmp_l = cmp_sub.add_parser(
+        "lookup",
+        help="local benchmarks; --live needs gateway/ingest (see docs/comp_live.md); --sources jobs needs no ToS",
+    )
     cmp_l.add_argument("--title", default="")
     cmp_l.add_argument("--query", default="")
     cmp_l.add_argument("--company", default="")
@@ -1462,10 +1575,12 @@ def build_parser() -> argparse.ArgumentParser:
     sess_st = sess_sub.add_parser("status")
     sess_st.add_argument("--name", default="default")
     sess_st.set_defaults(func=cmd_session)
-    sess_sc = sess_sub.add_parser("scout-html", help="parse list HTML/fixture → warehouse")
+    sess_sc = sess_sub.add_parser("scout-html", help="parse user-exported list HTML/fixture → warehouse")
     sess_sc.add_argument("--fixture", default=None)
     sess_sc.add_argument("--file", default=None)
-    sess_sc.add_argument("--url", default=None)
+    sess_sc.add_argument("--url", default=None, help="optional base URL for relative links")
+    sess_sc.add_argument("--match", action="store_true", help="also match_and_save top rows")
+    sess_sc.add_argument("--limit", type=int, default=50)
     sess_sc.add_argument("--i-accept-tos-risk", action="store_true")
     sess_sc.set_defaults(func=cmd_session)
 

@@ -80,40 +80,26 @@ def collect_rss(root: Path, url: str, limit: int = 10) -> list[dict]:
 
 
 def collect_career_html(root: Path, url: str, limit: int = 10) -> list[dict]:
+    from .career_recommend import html_to_jd_markdown, parse_career_page
+
     html = fetch_url(url)
-    soup = BeautifulSoup(html, "lxml")
-    # Heuristic: job-like anchors / headings
-    candidates: list[tuple[str, str]] = []
-    for a in soup.find_all("a", href=True):
-        text = a.get_text(" ", strip=True)
-        href = a["href"]
-        if len(text) < 4:
-            continue
-        if re.search(r"job|career|position|岗位|职位|招聘", text + href, re.I):
-            candidates.append((text, href))
-    # also page title as single job if few candidates
-    if not candidates:
-        title = (soup.title.string if soup.title else "Career Page") or "Career Page"
-        body = soup.get_text("\n", strip=True)[:4000]
-        m = match_and_save(root, f"职位：{title}\n公司：{urlparse(url).hostname}\n\n{body}")
+    host = urlparse(url).hostname or "career"
+    jobs = parse_career_page(html, base_url=url, company=host, limit=limit)
+    if not jobs:
+        md = html_to_jd_markdown(html, base_url=url, company=host)
+        m = match_and_save(root, md)
         return [{"job_id": m.job_id, "title": m.title, "score": m.score}]
 
     results = []
-    seen = set()
-    for text, href in candidates:
-        if text in seen:
-            continue
-        seen.add(text)
-        body = f"职位：{text}\n公司：{urlparse(url).hostname}\n链接：{href}\n来源页：{url}"
-        m = match_and_save(root, body)
-        results.append({"job_id": m.job_id, "title": m.title, "score": m.score})
-        if len(results) >= limit:
-            break
+    for j in jobs[:limit]:
+        text = j.get("text") or html_to_jd_markdown(html, base_url=j.get("url") or url, company=j.get("company") or host)
+        m = match_and_save(root, text)
+        results.append({"job_id": m.job_id, "title": m.title, "score": m.score, "url": j.get("url")})
     return results
 
 
 def collect_ats_board(root: Path, board: str, limit: int = 10) -> list[dict]:
-    """Public Greenhouse/Lever/Ashby board → match_and_save."""
+    """Public Greenhouse/Lever/Ashby/SmartRecruiters board → match_and_save."""
     from .ats_scan import collect_ats
 
     return collect_ats(root, board=board, limit=limit, match=True)

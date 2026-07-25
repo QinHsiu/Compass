@@ -49,6 +49,9 @@ compass_core = [
   "assets/questions/*.json",
   "assets/questions/*.md",
   "assets/life/*.json",
+  "assets/jd_redflags.json",
+  "assets/jd_redflags.yml",
+  "assets/companies_seed.json",
 ]
 
 [tool.pytest.ini_options]

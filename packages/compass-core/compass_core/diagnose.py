@@ -249,6 +249,26 @@ def diagnose_and_save(root: Path, job_id: str) -> dict:
                 "bank_ids": [d["id"] for d in drills],
             }
         )
+    redflags = None
+    try:
+        from .jd_redflags import analyze_job
+
+        redflags = analyze_job(root, job_id)
+        for h in (redflags.get("flags") or [])[:5]:
+            actions.append(
+                {
+                    "quadrant": "risk",
+                    "priority": h.get("priority") or "P2",
+                    "what": f"JD红旗「{h.get('label')}」: {h.get('hint')}",
+                    "proof": "jobs/*/redflags.json + 面试追问记录",
+                    "eta": "面试前",
+                    "related_evidence": [],
+                    "related_jd_keywords": h.get("matched") or [],
+                    "redflag_id": h.get("id"),
+                }
+            )
+    except Exception:
+        redflags = None
     out = root / "diagnoses" / job_id
     out.mkdir(parents=True, exist_ok=True)
     report = render_report(jd, match, actions)
@@ -257,6 +277,12 @@ def diagnose_and_save(root: Path, job_id: str) -> dict:
             f"- `{d['id']}` {d['q']} _(source: {d.get('source')})_" for d in drills
         )
         report += f"\n## Suggested bank drills\n\n{drill_lines}\n"
+    if redflags and redflags.get("flags"):
+        rf_lines = "\n".join(
+            f"- **{h.get('priority')}** `{h.get('id')}` {h.get('label')} — matched: {', '.join(h.get('matched') or [])}"
+            for h in redflags["flags"]
+        )
+        report += f"\n## JD red-flags ({redflags.get('risk')})\n\n{rf_lines}\n"
     bridge = render_bridge(jd, actions)
     (out / "report.md").write_text(report, encoding="utf-8")
     (out / "bridge_plan.md").write_text(bridge, encoding="utf-8")
@@ -292,5 +318,6 @@ def diagnose_and_save(root: Path, job_id: str) -> dict:
         "resume_metrics": resume_metrics,
         "practice": practice_rollup(root),
         "posting_liveness": match.posting_liveness,
+        "redflags": redflags,
         "path": str(out),
     }

@@ -1,0 +1,5 @@
+# Optional public remote job feeds (discover --source feeds)
+# Builtin: remotive, arbeitnow — override or add:
+# feeds:
+#   remotive: https://remotive.com/api/remote-jobs
+#   myfeed: https://example.com/jobs.json

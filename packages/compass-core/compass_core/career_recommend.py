@@ -25,7 +25,7 @@ _ATS_HINT = re.compile(
 
 
 def detect_ats_from_html(html: str, page_url: str = "") -> str | None:
-    """Infer greenhouse:slug / lever:slug / ashby:slug from career HTML."""
+    """Infer greenhouse:slug / lever:slug / ashby:slug / smartrecruiters:id from career HTML."""
     blob = f"{html}\n{page_url}"
     m = re.search(r"boards\.greenhouse\.io/([a-z0-9_-]+)", blob, re.I)
     if m:
@@ -42,7 +42,182 @@ def detect_ats_from_html(html: str, page_url: str = "") -> str | None:
     m = re.search(r"job-board/([a-z0-9_-]+)", blob, re.I)
     if m and "ashby" in blob.lower():
         return f"ashby:{m.group(1)}"
+    m = re.search(r"smartrecruiters\.com/([a-zA-Z0-9_-]+)/?", blob, re.I)
+    if m and "api.smartrecruiters" not in blob.lower():
+        slug = m.group(1)
+        if slug.lower() not in ("www", "api", "app", "careers"):
+            return f"smartrecruiters:{slug}"
+    m = re.search(r"api\.smartrecruiters\.com/v1/companies/([a-zA-Z0-9_-]+)", blob, re.I)
+    if m:
+        return f"smartrecruiters:{m.group(1)}"
     return None
+
+
+def html_to_jd_markdown(
+    html: str,
+    *,
+    base_url: str = "",
+    company: str = "",
+    fit: bool = True,
+) -> str:
+    """LLM-friendly clean markdown from career/job HTML (Crawl4AI pattern, no deps)."""
+    parts: list[str] = []
+    # Prefer JSON-LD JobPosting
+    for m in re.finditer(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html,
+        re.I | re.S,
+    ):
+        raw = m.group(1).strip()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            types = it.get("@type")
+            ok = "JobPosting" in types if isinstance(types, list) else types == "JobPosting"
+            if not ok:
+                continue
+            title = it.get("title") or "Untitled"
+            url = it.get("url") or base_url
+            desc = re.sub(r"<[^>]+>", " ", str(it.get("description") or ""))
+            desc = re.sub(r"\s+", " ", desc).strip()[:8000]
+            loc = ""
+            jl = it.get("jobLocation") or {}
+            if isinstance(jl, dict):
+                addr = jl.get("address") or {}
+                if isinstance(addr, dict):
+                    loc = addr.get("addressLocality") or addr.get("addressRegion") or ""
+            org = it.get("hiringOrganization") or {}
+            co = org.get("name") if isinstance(org, dict) else company
+            parts.append(f"# {title}")
+            parts.append(f"**Company**: {co or company or '—'}")
+            if loc:
+                parts.append(f"**Location**: {loc}")
+            if url:
+                parts.append(f"**URL**: {url}")
+            parts.append("")
+            parts.append("## Description")
+            parts.append(desc or "_(empty)_")
+            parts.append("")
+    if parts:
+        return "\n".join(parts).strip()
+
+    soup = BeautifulSoup(html, "lxml")
+    for tag in soup(["script", "style", "noscript", "svg"]):
+        tag.decompose()
+    if fit:
+        for tag in soup(["nav", "footer", "header", "aside"]):
+            tag.decompose()
+    main = None
+    if fit:
+        main = (
+            soup.find("main")
+            or soup.find(attrs={"role": "main"})
+            or soup.find("article")
+            or soup.find(class_=re.compile(r"job|posting|description|content", re.I))
+        )
+    root = main or soup.body or soup
+    title = ""
+    if soup.title and soup.title.string:
+        title = soup.title.string.strip()
+    h1 = root.find(["h1", "h2"]) if hasattr(root, "find") else None
+    if h1:
+        title = title or h1.get_text(" ", strip=True)
+    body = root.get_text("\n", strip=True) if root else ""
+    body = re.sub(r"\n{3,}", "\n\n", body)[:8000]
+    out = [f"# {title or 'Career page'}"]
+    if company:
+        out.append(f"**Company**: {company}")
+    if base_url:
+        out.append(f"**URL**: {base_url}")
+    out.extend(["", "## Description", body or "_(empty)_"])
+    return "\n".join(out).strip()
+
+
+def content_hash(text: str) -> str:
+    import hashlib
+
+    return hashlib.sha1((text or "").encode("utf-8")).hexdigest()[:16]
+
+
+def same_site(url: str, base: str) -> bool:
+    a = urlparse(url)
+    b = urlparse(base)
+    return bool(a.hostname) and a.hostname == b.hostname
+
+
+def crawl_career_depth(
+    company: dict,
+    *,
+    limit: int = 15,
+    depth: int = 1,
+    fetch_fn=None,
+    fetch_html_fn=None,
+    seen_hashes: set[str] | None = None,
+) -> list[dict]:
+    """
+    List page → optional detail pages (depth=1), same-host only.
+    Crawl4AI-style limited crawl without browser stack.
+    """
+    name = company.get("name") or "unknown"
+    depth = max(0, min(int(depth), 2))
+    seen_hashes = seen_hashes if seen_hashes is not None else set()
+
+    # depth 0: existing crawl_company path
+    if depth == 0:
+        return crawl_company(company, limit=limit, fetch_fn=fetch_fn, fetch_html_fn=fetch_html_fn)
+
+    jobs = crawl_company(company, limit=limit, fetch_fn=fetch_fn, fetch_html_fn=fetch_html_fn)
+    if depth < 1:
+        return jobs
+
+    career_url = company.get("career_url") or ""
+    enriched: list[dict] = []
+    detail_budget = min(limit, 8)
+
+    for j in jobs:
+        j = dict(j)
+        j["depth"] = 0
+        h = content_hash(j.get("text") or j.get("url") or "")
+        j["content_hash"] = h
+        if h in seen_hashes:
+            continue
+        seen_hashes.add(h)
+
+        url = (j.get("url") or "").strip()
+        # fetch detail when listing text is thin and same-site
+        need_detail = (
+            depth >= 1
+            and url
+            and career_url
+            and same_site(url, career_url)
+            and url.rstrip("/") != career_url.rstrip("/")
+            and len(j.get("text") or "") < 800
+            and detail_budget > 0
+        )
+        if need_detail:
+            try:
+                assert_url_allowed(url)
+                html = fetch_html_fn(url) if fetch_html_fn else fetch_url(url)
+                md = html_to_jd_markdown(html, base_url=url, company=name, fit=True)
+                dh = content_hash(md)
+                if dh not in seen_hashes and len(md) > len(j.get("text") or ""):
+                    j["text"] = md
+                    j["source"] = (j.get("source") or "career") + "+detail"
+                    j["depth"] = 1
+                    j["content_hash"] = dh
+                    seen_hashes.add(dh)
+                    detail_budget -= 1
+            except Exception:
+                pass
+        enriched.append(j)
+        if len(enriched) >= limit:
+            break
+    return enriched[:limit]
 
 
 def parse_career_page(html: str, *, base_url: str, company: str, limit: int = 30) -> list[dict]:
@@ -69,7 +244,22 @@ def parse_career_page(html: str, *, base_url: str, company: str, limit: int = 30
                 continue
             title = it.get("title") or ""
             url = it.get("url") or base_url
-            desc = re.sub(r"<[^>]+>", " ", str(it.get("description") or ""))[:5000]
+            # rebuild mini HTML for markdown path
+            mini = (
+                f'<script type="application/ld+json">{json.dumps(it, ensure_ascii=False)}</script>'
+            )
+            text = html_to_jd_markdown(mini, base_url=url, company=company)
+            if not text or "Description" not in text:
+                desc = re.sub(r"<[^>]+>", " ", str(it.get("description") or ""))[:5000]
+                loc = ""
+                jl = it.get("jobLocation") or {}
+                if isinstance(jl, dict):
+                    addr = jl.get("address") or {}
+                    if isinstance(addr, dict):
+                        loc = addr.get("addressLocality") or ""
+                org = it.get("hiringOrganization") or {}
+                co = org.get("name") if isinstance(org, dict) else company
+                text = f"职位：{title}\n公司：{co or company}\n工作地：{loc}\n链接：{url}\n\n{desc}"
             loc = ""
             jl = it.get("jobLocation") or {}
             if isinstance(jl, dict):
@@ -86,7 +276,6 @@ def parse_career_page(html: str, *, base_url: str, company: str, limit: int = 30
                     salary = f"{val.get('minValue')}-{val.get('maxValue')} {val.get('unitText') or ''}"
                 else:
                     salary = str(val)
-            text = f"职位：{title}\n公司：{co or company}\n工作地：{loc}\n链接：{url}\n薪资：{salary}\n\n{desc}"
             jobs.append(
                 {
                     "title": title,
@@ -111,10 +300,13 @@ def parse_career_page(html: str, *, base_url: str, company: str, limit: int = 30
         full = urljoin(base_url, href)
         if full in seen:
             continue
-        # skip pure nav
         if re.search(r"login|signin|cookie|privacy", full, re.I):
             continue
         seen.add(full)
+        text = (
+            f"# {label[:120]}\n**Company**: {company}\n**URL**: {full}\n\n"
+            f"## Description\nListing from {base_url}"
+        )
         jobs.append(
             {
                 "title": label[:120],
@@ -123,7 +315,7 @@ def parse_career_page(html: str, *, base_url: str, company: str, limit: int = 30
                 "location": "",
                 "salary_hint": "",
                 "source": "career_html",
-                "text": f"职位：{label}\n公司：{company}\n链接：{full}\n来源：{base_url}",
+                "text": text,
             }
         )
         if len(jobs) >= limit:
@@ -200,6 +392,7 @@ def recommend_jobs(
     companies: list[dict] | None = None,
     fetch_fn=None,
     fetch_html_fn=None,
+    depth: int = 0,
 ) -> dict:
     """Crawl company official sites / ATS → filter → match → ranked recommendations."""
     root = Path(root)
@@ -212,6 +405,14 @@ def recommend_jobs(
 
     def _one(c: dict) -> tuple[str, list[dict], str | None]:
         try:
+            if depth >= 1:
+                return c.get("name") or "", crawl_career_depth(
+                    c,
+                    limit=max(8, limit // max(len(cos), 1) + 5),
+                    depth=depth,
+                    fetch_fn=fetch_fn,
+                    fetch_html_fn=fetch_html_fn,
+                ), None
             return c.get("name") or "", crawl_company(
                 c, limit=max(8, limit // max(len(cos), 1) + 5), fetch_fn=fetch_fn, fetch_html_fn=fetch_html_fn
             ), None

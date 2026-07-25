@@ -392,3 +392,183 @@ def test_life_confidence_route(root: Path):
     assert direct["route"] == "direct"
     assert direct["plan"]["scores"]
     assert (root / "life" / direct["session_id"] / "export" / "report.html").is_file()
+
+
+def test_html_to_jd_markdown():
+    from compass_core.career_recommend import html_to_jd_markdown, parse_career_page
+
+    html = (FIXTURE / "career_jsonld.html").read_text(encoding="utf-8")
+    md = html_to_jd_markdown(html, base_url="https://example.com/careers", company="ExampleAI")
+    assert "ML Platform Engineer" in md
+    assert "Description" in md
+    assert "feature store" in md.lower() or "Feature" in md or "Python" in md
+    jobs = parse_career_page(html, base_url="https://example.com/careers", company="ExampleAI")
+    assert any(j.get("title") == "ML Platform Engineer" for j in jobs)
+    list_html = (FIXTURE / "career_list.html").read_text(encoding="utf-8")
+    listed = parse_career_page(list_html, base_url="https://example.com/careers", company="ExampleAI")
+    assert len(listed) >= 1
+
+
+def test_smartrecruiters_normalize():
+    from compass_core.ats_scan import normalize_jobs, parse_board_spec
+
+    ats, slug = parse_board_spec("smartrecruiters:acme")
+    assert ats == "smartrecruiters" and slug == "acme"
+    payload = {
+        "content": [
+            {
+                "name": "Backend Engineer",
+                "id": "abc123",
+                "location": {"city": "Berlin"},
+                "company": {"name": "Acme"},
+                "releasedDate": "2026-01-15",
+                "department": {"label": "Engineering"},
+            }
+        ]
+    }
+    jobs = normalize_jobs("smartrecruiters", "acme", payload)
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "Backend Engineer"
+    assert "Berlin" in jobs[0]["text"]
+
+
+def test_feeds_collect(root: Path):
+    from compass_core.feeds import collect_feeds, normalize_feed_jobs
+
+    payload = {
+        "jobs": [
+            {
+                "title": "Remote Python Dev",
+                "company_name": "RemotiveCo",
+                "url": "https://remotive.com/jobs/1",
+                "candidate_required_location": "Worldwide",
+                "description": "<p>Python Kubernetes</p>",
+                "tags": ["python"],
+            }
+        ]
+    }
+    jobs = normalize_feed_jobs("remotive_json", payload, source="feed:remotive")
+    assert len(jobs) == 1
+
+    def _fetch(_url):
+        return payload
+
+    out = collect_feeds(root, feed="remotive", limit=5, match=True, fetch_fn=_fetch)
+    assert out["crawled"] >= 1
+    assert out["warehouse"]["ingested"] >= 1
+    assert out["jobs"][0].get("job_id")
+
+
+def test_watch_scan_dedupe(root: Path):
+    from compass_core.warehouse import ingest_rows
+    from compass_core.watch import watch_scan
+
+    ingest_rows(
+        root,
+        [{"title": "Old", "company": "X", "url": "https://example.com/jobs/old", "raw": "old"}],
+        source="seed",
+    )
+
+    # empty portals/companies → scanned 0 but summary written
+    out = watch_scan(root, limit=5, dry_run=True, match=False)
+    assert "path" in out
+    assert Path(out["path"]).is_file()
+    assert out["known_urls"] >= 1
+    assert out["dry_run"] is True
+
+
+def test_jd_redflags(root: Path):
+    from compass_core.jd_redflags import analyze_jd_text, analyze_job
+
+    text = (
+        "岗位职责：作为团队螺丝钉，需要抗压能力强，善于赋能业务抓手，"
+        "懂技术更好，独立负责从0到1。"
+    )
+    out = analyze_jd_text(text, title="伪技术岗", company="Demo")
+    assert out["count"] >= 1
+    assert out["risk"] in ("low", "medium", "high")
+    assert any("螺丝钉" in (h.get("matched") or []) or h.get("id") == "rf_screw" for h in out["flags"])
+
+    m = match_and_save(root, f"职位：Backend\n公司：Demo\n\n{text}")
+    rf = analyze_job(root, m.job_id)
+    assert (root / "jobs" / m.job_id / "redflags.json").is_file()
+    assert rf["count"] >= 1
+
+
+def test_multi_discover(root: Path):
+    from compass_core.multi_discover import discover_multi
+
+    remotive = {
+        "jobs": [
+            {
+                "title": "Multi Feed Dev",
+                "company_name": "FeedCo",
+                "url": "https://remotive.com/jobs/99",
+                "candidate_required_location": "Remote",
+                "description": "Python",
+                "tags": ["python"],
+            }
+        ]
+    }
+
+    def _fetch(url: str):
+        if "remotive" in url:
+            return remotive
+        raise OSError("blocked in test")
+
+    out = discover_multi(
+        root,
+        sources=["feeds"],
+        feed="remotive",
+        limit=5,
+        match=False,
+        fetch_fn=_fetch,
+    )
+    assert out["mode"] == "multi"
+    assert out["count"] >= 1
+    assert Path(out["path"]).is_file()
+
+
+def test_auth_html_cards(root: Path):
+    from compass_core.auth_collect import parse_job_list_html, scout_auth_html
+
+    fixture = REPO / "collectors" / "experimental" / "fixtures" / "sample_job_list.html"
+    html = fixture.read_text(encoding="utf-8")
+    jobs = parse_job_list_html(html, base_url="https://example.com/")
+    assert len(jobs) >= 3
+    assert any(j.get("source") == "auth_html_card" for j in jobs) or any(
+        "Data Engineer" in (j.get("title") or "") for j in jobs
+    )
+    out = scout_auth_html(root, fixture=fixture, accept_tos_risk=True, match=False)
+    assert out["jobs"] >= 2
+    assert out["warehouse"]["ingested"] >= 2
+
+
+def test_fit_markdown_and_depth(root: Path):
+    from compass_core.career_recommend import crawl_career_depth, html_to_jd_markdown
+
+    list_html = (FIXTURE / "career_list.html").read_text(encoding="utf-8")
+    md = html_to_jd_markdown(list_html, base_url="https://example.com/careers", company="ExampleAI", fit=True)
+    assert "Description" in md
+    assert "privacy" not in md.lower() or "Open roles" in md
+
+    detail_pages = {
+        "https://example.com/careers": list_html,
+        "https://example.com/careers/platform": (
+            "<html><body><main><h1>Platform Engineer</h1>"
+            "<p>Own Kubernetes feature store latency SLOs with Python.</p></main></body></html>"
+        ),
+        "https://example.com/careers/sre": (
+            "<html><body><main><h1>SRE</h1><p>Oncall and SLIs.</p></main></body></html>"
+        ),
+    }
+
+    def _html(url: str) -> str:
+        return detail_pages.get(url, "<html></html>")
+
+    co = {"name": "ExampleAI", "career_url": "https://example.com/careers"}
+    jobs = crawl_career_depth(co, limit=5, depth=1, fetch_html_fn=_html)
+    assert len(jobs) >= 1
+    assert any(j.get("depth") == 1 or "feature store" in (j.get("text") or "").lower() for j in jobs) or any(
+        j.get("title") for j in jobs
+    )

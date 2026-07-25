@@ -23,6 +23,7 @@ ATS_ALLOWLIST = {
     "api.lever.co",
     "api.eu.lever.co",
     "api.ashbyhq.com",
+    "api.smartrecruiters.com",
 }
 
 
@@ -31,7 +32,7 @@ def _assert_ats_host(url: str) -> None:
     if host not in ATS_ALLOWLIST:
         raise PermissionError(
             f"ATS host {host} not in allowlist {sorted(ATS_ALLOWLIST)}. "
-            "Use greenhouse:/lever:/ashby: board specs or paste JD."
+            "Use greenhouse:/lever:/ashby:/smartrecruiters: board specs or paste JD."
         )
     assert_url_allowed(url)
 
@@ -62,8 +63,8 @@ def parse_board_spec(spec: str) -> tuple[str, str]:
         ats, slug = s.split(":", 1)
         ats = ats.strip().lower()
         slug = slug.strip().strip("/")
-        if ats not in ("greenhouse", "lever", "ashby"):
-            raise ValueError(f"unknown ats {ats}; use greenhouse|lever|ashby")
+        if ats not in ("greenhouse", "lever", "ashby", "smartrecruiters"):
+            raise ValueError(f"unknown ats {ats}; use greenhouse|lever|ashby|smartrecruiters")
         if not slug:
             raise ValueError("empty board slug")
         return ats, slug
@@ -88,6 +89,14 @@ def parse_board_spec(spec: str) -> tuple[str, str]:
         # jobs.ashbyhq.com/acme/...
         if parts:
             return "ashby", parts[0]
+    if "smartrecruiters" in host:
+        # api.smartrecruiters.com/v1/companies/{id}/postings or careers.smartrecruiters.com/{id}
+        if "companies" in parts:
+            i = parts.index("companies")
+            if i + 1 < len(parts):
+                return "smartrecruiters", parts[i + 1]
+        if parts:
+            return "smartrecruiters", parts[0]
     raise ValueError(f"cannot parse board from {spec!r}; use greenhouse:slug")
 
 
@@ -98,6 +107,8 @@ def api_url(ats: str, slug: str) -> str:
         return f"https://api.lever.co/v0/postings/{slug}?mode=json"
     if ats == "ashby":
         return f"https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true"
+    if ats == "smartrecruiters":
+        return f"https://api.smartrecruiters.com/v1/companies/{slug}/postings?limit=100"
     raise ValueError(ats)
 
 
@@ -205,6 +216,55 @@ def normalize_jobs(ats: str, slug: str, payload: Any) -> list[dict]:
                     "ats": ats,
                     "board": slug,
                     "salary_hint": comp,
+                    "text": "\n".join(p for p in body_parts if p),
+                }
+            )
+    elif ats == "smartrecruiters":
+        # Public API: { content: [ {name, company, location, releasedDate, refNumber, ...} ], totalFound }
+        content = (payload or {}).get("content") if isinstance(payload, dict) else None
+        jobs = content if isinstance(content, list) else (payload if isinstance(payload, list) else [])
+        for j in jobs:
+            if not isinstance(j, dict):
+                continue
+            title = str(j.get("name") or j.get("title") or "Untitled")
+            ref = str(j.get("id") or j.get("uuid") or j.get("refNumber") or "")
+            abs_url = str(j.get("applyUrl") or j.get("ref") or "")
+            if not abs_url and ref:
+                abs_url = f"https://jobs.smartrecruiters.com/{slug}/{ref}"
+            loc_obj = j.get("location") or {}
+            if isinstance(loc_obj, dict):
+                loc = str(loc_obj.get("city") or loc_obj.get("region") or loc_obj.get("country") or "")
+            else:
+                loc = str(loc_obj or "")
+            posted = str(j.get("releasedDate") or j.get("createdOn") or "")[:10] or None
+            dept = ""
+            if isinstance(j.get("department"), dict):
+                dept = str(j["department"].get("label") or "")
+            elif j.get("department"):
+                dept = str(j.get("department"))
+            desc = _strip_html(str(j.get("jobAd") or j.get("description") or ""))
+            if not desc and dept:
+                desc = f"Department: {dept}"
+            co = company
+            if isinstance(j.get("company"), dict):
+                co = str(j["company"].get("name") or company)
+            body_parts = [
+                f"职位：{title}",
+                f"公司：{co}",
+                f"工作地：{loc}" if loc else "",
+                f"发布：{posted}" if posted else "",
+                f"链接：{abs_url}" if abs_url else "",
+                "",
+                desc[:6000] if desc else f"SmartRecruiters posting {ref}",
+            ]
+            out.append(
+                {
+                    "title": title,
+                    "company": co,
+                    "url": abs_url,
+                    "posted_at": posted,
+                    "ats": ats,
+                    "board": slug,
                     "text": "\n".join(p for p in body_parts if p),
                 }
             )
