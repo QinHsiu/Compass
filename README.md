@@ -30,6 +30,14 @@
 
 <br/>
 
+<img src="docs/assets/tecience/banner.png" alt="From Tecience" width="720" />
+
+<br/>
+
+[![Tecience](https://img.shields.io/badge/From-Tecience_公众号-0B3D2E?style=for-the-badge&labelColor=1A2332)](#tecience-公众号--来源与关注)
+
+<br/>
+
 [快速开始](#快速开始--quick-start) ·
 [演示](#演示--demo-video) ·
 [能力](#核心能力) ·
@@ -206,6 +214,21 @@ docs/                  # 合规 · 竞品 · 迭代计划
 - 多源论证 / 拒虚假：`intel dossier|verify-salary`，见 [docs/intel.md](docs/intel.md)。
 - 简历 / 证据 / 画像仅存本地 `content/`，默认不上云、不提交真实经历。
 - 详见 [docs/COMPLIANCE.md](docs/COMPLIANCE.md) · [docs/observability.md](docs/observability.md)。
+
+---
+
+## Tecience 公众号 · 来源与关注
+
+本仓库由微信公众号 **Tecience** 开源维护。扫码关注 / 打开仓库：
+
+| 微信扫码关注 Tecience | 本仓库 GitHub | 作者主页 |
+|:---:|:---:|:---:|
+| <img src="docs/assets/tecience/qr-wechat.png" width="180" alt="Tecience WeChat OA" /> | <img src="docs/assets/tecience/qr-repo.png" width="180" alt="Compass" /> | <img src="docs/assets/tecience/qr-github.png" width="180" alt="QinHsiu" /> |
+
+- **关注：** 微信扫一扫上方公众号码，或搜一搜 **Tecience**  
+- **关键词：** 回复 `COMPASS` 获取求职罗盘相关说明与更新  
+
+官方码原图：`docs/assets/tecience/qr-wechat-oa.png`
 
 ---
 
