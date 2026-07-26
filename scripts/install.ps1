@@ -17,9 +17,12 @@ try { python -m pip install "mcp>=1.0" } catch { Write-Host "(optional) mcp skip
 try { python -m pip install -r apps/studio/requirements.txt } catch { Write-Host "(optional) studio reqs partial" }
 
 $SkillSrc = Join-Path $Root "skill"
-$Dest = "d:\PycharmProjects\pythonProject\.cursor\skills\compass"
-if (-not (Test-Path (Split-Path $Dest))) {
-  $Dest = Join-Path $env:USERPROFILE ".cursor\skills\compass"
+# Prefer workspace .cursor/skills (repo/../../.cursor) then user profile
+$WorkspaceCursor = Join-Path (Split-Path (Split-Path $Root -Parent) -Parent) ".cursor\skills\compass"
+$Dest = if (Test-Path (Split-Path $WorkspaceCursor -Parent)) {
+  $WorkspaceCursor
+} else {
+  Join-Path $env:USERPROFILE ".cursor\skills\compass"
 }
 if (Test-Path $Dest) { Remove-Item -Recurse -Force $Dest }
 Copy-Item -Recurse $SkillSrc $Dest

@@ -32,11 +32,8 @@ install_skill() {
   echo "Skill installed -> $dest"
 }
 
-# Prefer workspace .cursor/skills if present
-WS_SKILLS="d:/PycharmProjects/pythonProject/.cursor/skills/compass"
-if [[ -d "d:/PycharmProjects/pythonProject/.cursor/skills" ]]; then
-  install_skill "d:/PycharmProjects/pythonProject/.cursor/skills/compass"
-elif [[ -d "$ROOT/../../.cursor/skills" ]]; then
+# Prefer workspace .cursor/skills if present (portable: relative to repo)
+if [[ -d "$ROOT/../../.cursor/skills" ]]; then
   install_skill "$(cd "$ROOT/../.." && pwd)/.cursor/skills/compass"
 else
   install_skill "$DEST_USER"

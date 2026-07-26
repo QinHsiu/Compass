@@ -4,7 +4,7 @@
       "command": "python",
       "args": ["-m", "compass_mcp.server"],
       "env": {
-        "COMPASS_ROOT": "D:/PycharmProjects/pythonProject/projects/Compass/content"
+        "COMPASS_ROOT": "./content"
       }
     }
   }

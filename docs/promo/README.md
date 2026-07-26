@@ -12,7 +12,7 @@
 ## 重新生成
 
 ```powershell
-cd d:\PycharmProjects\pythonProject\projects\Compass
+cd <repo-root>   # e.g. after: git clone …/Compass && cd Compass
 python docs/promo/generate_slides.py
 python docs/promo/make_slideshow.py
 python docs/promo/add_narration.py
