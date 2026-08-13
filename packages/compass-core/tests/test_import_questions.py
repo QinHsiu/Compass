@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from compass_core.questions import load_bank, search_questions, validate_record
+from compass_core.questions import infer_topics, load_bank, search_questions, validate_record
 
 
 def test_validate_record_fills_defaults():
@@ -58,3 +58,68 @@ def test_search_questions_filters_pack_and_difficulty():
         limit=10,
     )
     assert [h["id"] for h in hits] == ["a"]
+
+
+def test_search_questions_filters_company():
+    bank = [
+        validate_record({"id": "a", "q": "System design question", "company": ["Google", "Alphabet"], "tags": ["design"]}),
+        validate_record({"id": "b", "q": "System design question", "company": ["Meta"], "tags": ["design"]}),
+    ]
+    hits = search_questions("design", bank=bank, company="Google", limit=10)
+    assert [h["id"] for h in hits] == ["a"]
+
+
+def test_search_questions_filters_position():
+    bank = [
+        validate_record({"id": "a", "q": "ML fundamentals", "position": "MLE", "tags": ["ml"]}),
+        validate_record({"id": "b", "q": "ML fundamentals", "position": "SWE", "tags": ["ml"]}),
+    ]
+    hits = search_questions("ml", bank=bank, position="mle", limit=10)
+    assert [h["id"] for h in hits] == ["a"]
+
+
+def test_search_questions_filters_round():
+    bank = [
+        validate_record({"id": "a", "q": "Coding round question", "round": "onsite", "tags": ["coding"]}),
+        validate_record({"id": "b", "q": "Coding round question", "round": "phone", "tags": ["coding"]}),
+    ]
+    hits = search_questions("coding", bank=bank, round="onsite", limit=10)
+    assert [h["id"] for h in hits] == ["a"]
+
+
+def test_search_questions_topics_boost_only_without_pack():
+    bank = [
+        validate_record({"id": "a", "q": "Explain BERT tokenizer?", "topic": "nlp", "tags": ["bert"]}),
+        validate_record({"id": "b", "q": "Explain BERT tokenizer?", "topic": "cv", "tags": ["bert"]}),
+    ]
+    hits_no_topic = search_questions("bert", bank=bank, limit=10)
+    hits_with_topic = search_questions("bert", bank=bank, topics=["cv"], limit=10)
+    assert {h["id"] for h in hits_no_topic} == {"a", "b"}
+    assert {h["id"] for h in hits_with_topic} == {"a", "b"}
+    assert hits_with_topic[0]["id"] == "b"
+
+
+def test_search_questions_topics_boost_only_with_pack():
+    bank = [
+        validate_record({"id": "a", "q": "Explain BERT?", "topic": "nlp", "pack": "nlp-pack", "tags": ["bert"]}),
+        validate_record({"id": "b", "q": "Explain BERT?", "topic": "cv", "pack": "cv-pack", "tags": ["bert"]}),
+    ]
+    hits = search_questions("bert", bank=bank, pack="nlp-pack", topics=["cv"], limit=10)
+    assert [h["id"] for h in hits] == ["a"]
+
+
+def test_infer_topics_cv_mapping():
+    assert "cv" in infer_topics(["yolo object detection 分割"])
+
+
+def test_infer_topics_nlp_mapping():
+    assert "nlp" in infer_topics(["bert tokenizer 预训练 词向量"])
+
+
+def test_infer_topics_ml_mapping():
+    assert "ml" in infer_topics(["gradient descent batchnorm cnn"])
+
+
+def test_infer_topics_algorithms_extended_keys():
+    assert "algorithms" in infer_topics(["动态规划 链表"])
+    assert "algorithms" in infer_topics(["回溯 leetcode"])

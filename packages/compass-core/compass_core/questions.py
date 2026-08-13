@@ -217,7 +217,7 @@ def search_questions(
         if topic_set and (it.get("topic") or "").lower() not in topic_set and not (
             set(it.get("tags") or []) & topic_set
         ):
-            # keep existing topic boost behavior; do not hard-filter on topics unless pack set
+            # topics are boost-only (never a hard filter), even when pack is set
             pass
         if company:
             blob = " ".join(str(c).lower() for c in (it.get("company") or []))
