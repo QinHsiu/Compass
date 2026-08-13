@@ -379,3 +379,18 @@ def test_followup_challenging_senior_prefix():
     fu = next_followup(pack, _GOOD_ANSWER, gate_ok=True, turn=0)
     assert fu["question"].startswith("（高压追问）")
     assert "Hard question?" in fu["question"]
+
+
+from compass_core.answer_rubric import score_qa_rubric
+
+
+def test_rubric_outline_boosts_substance():
+    q = "Explain LoRA"
+    outline = "Freeze W, train BA with rank r. Memory vs full fine-tune."
+    weak = score_qa_rubric(q, "我做过模型训练，效果很好。", expected_outline=outline)
+    strong = score_qa_rubric(
+        q,
+        "我们 freeze 原权重 W，只训练低秩 BA，rank r=8，显存比 full fine-tune 低很多。",
+        expected_outline=outline,
+    )
+    assert strong["substance"] >= weak["substance"]
