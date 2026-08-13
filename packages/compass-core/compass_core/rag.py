@@ -11,6 +11,21 @@ from .questions import load_bank, search_questions
 COLLECTION = "compass_questions"
 
 
+def record_to_metadata(r: dict) -> dict:
+    companies = r.get("company") or []
+    if isinstance(companies, list):
+        co = ",".join(str(c) for c in companies)[:200]
+    else:
+        co = str(companies)[:200]
+    return {
+        "topic": str(r.get("topic") or "")[:200],
+        "source": str(r.get("source") or "")[:200],
+        "difficulty": str(r.get("difficulty") or "")[:32],
+        "pack": str(r.get("pack") or "")[:64],
+        "company": co,
+    }
+
+
 def _rag_dir(root: Path) -> Path:
     d = root / "rag"
     d.mkdir(parents=True, exist_ok=True)
@@ -41,16 +56,13 @@ def index_questions(root: Path) -> dict:
     ids, docs, metas = [], [], []
     for r in rows:
         qid = r.get("id") or f"anon_{len(ids)}"
-        text = f"{r.get('q', '')} topic:{r.get('topic', '')} tags:{' '.join(r.get('tags') or [])}"
+        text = (
+            f"{r.get('q', '')} topic:{r.get('topic', '')} pack:{r.get('pack', '')} "
+            f"tags:{' '.join(r.get('tags') or [])} company:{' '.join(r.get('company') or [])}"
+        )
         ids.append(qid)
         docs.append(text)
-        metas.append(
-            {
-                "topic": str(r.get("topic") or ""),
-                "source": str(r.get("source") or "")[:200],
-                "difficulty": str(r.get("difficulty") or ""),
-            }
-        )
+        metas.append(record_to_metadata(r))
     # batch add
     batch = 100
     for i in range(0, len(ids), batch):

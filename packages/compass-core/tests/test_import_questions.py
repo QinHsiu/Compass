@@ -394,3 +394,14 @@ def test_rubric_outline_boosts_substance():
         expected_outline=outline,
     )
     assert strong["substance"] >= weak["substance"]
+
+
+from compass_core.rag import record_to_metadata
+
+
+def test_rag_metadata_includes_pack():
+    row = validate_record({"id": "x", "q": "LoRA?", "pack": "cv-llm", "difficulty": "mid", "company": ["alibaba"], "topic": "llm"})
+    meta = record_to_metadata(row)
+    assert meta["pack"] == "cv-llm"
+    assert meta["difficulty"] == "mid"
+    assert "alibaba" in meta["company"]
