@@ -199,10 +199,10 @@ python -m compass_core.cli import-questions --root content --source algo
 python -m compass_core.cli import-questions --root content --source curated-bigtech
 python -m compass_core.cli import-questions --root content --source local --file path/to/extra.jsonl
 python -m compass_core.cli questions --root content --keywords python,kubernetes,rag --limit 10
-python -m compass_core.cli questions --root content --pack cv-llm --difficulty mid --company alibaba
+python -m compass_core.cli questions --root content --keywords system-design --company bytedance --limit 5
 ```
 
-Filter by pack (`cv-llm` / `nlp` / `mldl` / `algo` / `curated-bigtech` / `local`), difficulty, and company. Unlicensed dumps (`--source voice-interview` / 0voice) are blocked.
+`questions` CLI flags: `--keywords`, `--limit`, `--company` (company pack), `--semantic`, `--industry`. Pack / difficulty / company **field** filters for browsing the bank live on **Web 题库** (`apps/interview-live`). Unlicensed dumps (`import-questions --source voice-interview` / 0voice) are blocked.
 
 ### `/diagnose`
 
