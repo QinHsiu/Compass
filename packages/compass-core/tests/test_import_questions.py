@@ -193,3 +193,14 @@ def test_search_cv_llm_transformer():
     hits = search_questions("transformer attention diffusion", pack="cv-llm", limit=5)
     assert hits
     assert all(h.get("pack") == "cv-llm" for h in hits)
+
+
+def test_algo_pack_starter_code():
+    bank = [r for r in load_bank() if r.get("pack") == "algo"]
+    assert len(bank) >= 10
+    topics = {r.get("topic") for r in bank}
+    for need in ("array", "linked-list", "tree", "dp", "backtrack"):
+        assert need in topics
+    coded = [r for r in bank if r.get("starter_code")]
+    assert len(coded) >= 5
+    assert "def " in coded[0]["starter_code"]

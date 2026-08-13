@@ -74,8 +74,7 @@ def _tokenize(text: str) -> set[str]:
 
 
 def load_bank(extra_root: Path | None = None) -> list[dict]:
-    rows: list[dict] = []
-    seen: set[str] = set()
+    by_id: dict[str, dict] = {}
 
     def _add_file(path: Path) -> None:
         if not path.is_file():
@@ -88,10 +87,11 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
             except json.JSONDecodeError:
                 continue
             qid = rec.get("id") or ""
-            if qid in seen:
-                continue
-            seen.add(qid)
-            rows.append(rec)
+            prev = by_id.get(qid)
+            if prev is None:
+                by_id[qid] = rec
+            elif prev.get("pack") == "bank" and rec.get("pack") != "bank":
+                by_id[qid] = rec
 
     for name in PACK_ASSET_FILES:
         _add_file(ASSETS / name)
@@ -103,7 +103,7 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
         if imported.is_dir():
             for p in sorted(imported.glob("*.jsonl")):
                 _add_file(p)
-    return rows
+    return list(by_id.values())
 
 
 @lru_cache(maxsize=1)
