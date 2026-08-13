@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **import-questions**: curated cv-llm / nlp / mldl / algo / big-tech packs; local JSONL; blocks unlicensed 0voice dumps
+- **interview-pack**: persona-ranked bank hits + skill-overlap evidence attach
+- **Web 题库**: pack/difficulty/company filters; algo `starter_code` → Monaco
+
 ## 0.22.0 — 2026-07-25
 
 `/exp_loop` competitive refresh (online scan 2026-07-25): close cover/email/patterns gaps vs career-ops · Resume-Matcher · HireForge.

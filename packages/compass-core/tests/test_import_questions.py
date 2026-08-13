@@ -440,3 +440,14 @@ def test_rag_metadata_includes_pack():
     assert meta["pack"] == "cv-llm"
     assert meta["difficulty"] == "mid"
     assert "alibaba" in meta["company"]
+
+
+def test_sources_mentions_new_packs_and_blocklist():
+    from compass_core.questions import ASSETS
+
+    text = (ASSETS / "SOURCES.md").read_text(encoding="utf-8")
+    assert "cv_llm.jsonl" in text
+    assert "algo.jsonl" in text
+    assert "import-questions" in text
+    assert "0voice" in text
+    assert "not vendored" in text.lower() or "不入库" in text
