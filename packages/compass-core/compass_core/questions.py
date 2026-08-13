@@ -35,11 +35,12 @@ PACK_ASSET_FILES = (
 
 def validate_record(row: dict) -> dict:
     """Normalize a bank row. Unknown keys are kept."""
-    out = dict(row or {})
+    source = row or {}
+    out = dict(source)
     out["id"] = str(out.get("id") or "").strip() or "qb_anon"
     out["q"] = str(out.get("q") or out.get("question") or "").strip()
-    if "difficulty" not in row and row.get("level"):
-        mapped = _DIFF_MAP.get(str(row["level"]).lower())
+    if "difficulty" not in source and source.get("level"):
+        mapped = _DIFF_MAP.get(str(source["level"]).lower())
         if mapped:
             out["difficulty"] = mapped
     diff = str(out.get("difficulty") or "mid").strip().lower()

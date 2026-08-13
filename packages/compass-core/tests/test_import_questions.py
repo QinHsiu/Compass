@@ -20,6 +20,13 @@ def test_validate_record_fills_defaults():
     assert "persona_affinity" in row
 
 
+def test_validate_record_accepts_none():
+    row = validate_record(None)
+    assert isinstance(row, dict)
+    assert row["id"] == "qb_anon"
+    assert row["difficulty"] == "mid"
+
+
 def test_validate_record_maps_cn_difficulty():
     row = validate_record({"id": "x", "q": "q", "difficulty": "高级"})
     assert row["difficulty"] == "senior"
@@ -217,4 +224,4 @@ def test_company_pack_baidu_meituan_huawei():
     for co in ("baidu", "meituan", "huawei", "jingdong", "didi"):
         hits = search_company_pack(co, limit=8)
         assert len(hits) >= 2, co
-        assert all(hits[0].get("q"))
+        assert all(hit.get("q") for hit in hits)
