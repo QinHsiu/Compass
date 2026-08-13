@@ -48,6 +48,20 @@ def test_bank_search_args_and_lookup():
     assert algo and algo[0].get("starter_code")
 
 
+def test_bank_search_args_invalid_limit():
+    args = bank_search_args({"limit": "abc"})
+    assert args["limit"] == 12
+
+
+def test_search_questions_company_pack_hits():
+    hits = search_questions("alibaba", company="alibaba", limit=5)
+    assert hits
+    assert any("alibaba" in [c.lower() for c in (h.get("company") or [])] for h in hits)
+    hits_zh = search_questions("百度", company="百度", limit=5)
+    assert hits_zh
+    assert any("百度" in (h.get("company") or []) for h in hits_zh)
+
+
 def test_validate_record_fills_defaults():
     row = validate_record({"id": "qb_t_1", "q": "What is attention?"})
     assert row["id"] == "qb_t_1"

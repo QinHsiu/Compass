@@ -82,14 +82,17 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
     rows: list[dict] = []
     seen: set[str] = set()
 
-    def _add_file(path: Path) -> None:
+    def _add_file(path: Path, *, default_pack: str | None = None) -> None:
         if not path.is_file():
             return
         for ln in path.read_text(encoding="utf-8").splitlines():
             if not ln.strip():
                 continue
             try:
-                rec = validate_record(json.loads(ln))
+                raw = json.loads(ln)
+                rec = validate_record(raw)
+                if default_pack and not str(raw.get("pack") or "").strip():
+                    rec["pack"] = default_pack
             except json.JSONDecodeError:
                 continue
             qid = rec.get("id") or ""
@@ -100,6 +103,7 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
 
     for name in PACK_ASSET_FILES:
         _add_file(ASSETS / name)
+    _add_file(ASSETS / "company_packs.jsonl", default_pack="curated-bigtech")
     if extra_root:
         qdir = Path(extra_root) / "questions"
         _add_file(qdir / "extra.jsonl")
@@ -344,7 +348,10 @@ def bank_section_title(lang: str = "zh") -> str:
 
 
 def bank_search_args(msg: dict) -> dict:
-    limit = int(msg.get("limit") or 12)
+    try:
+        limit = int(msg.get("limit") or 12)
+    except (TypeError, ValueError):
+        limit = 12
     limit = max(1, min(limit, 50))
     return {
         "query": (msg.get("query") or msg.get("q") or "").strip() or "llm",
