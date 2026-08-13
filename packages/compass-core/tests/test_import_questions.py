@@ -320,3 +320,62 @@ def test_followup_uses_bank_id_and_meta():
     )
     assert fu["question"]
     assert (fu.get("meta") or {}).get("bank_id") == "qb_nlp_002"
+
+
+_GOOD_ANSWER = (
+    "当时背景是 NLP 预训练项目，我负责 BERT 微调。"
+    "我引入 MLM 预训练并做领域微调，最终将 p99 做到 45ms ev_featstore_latency，指标提升 30%。"
+)
+
+
+def test_followup_prefers_unused_bank_id():
+    pack = {
+        "title": "NLP 算法",
+        "gaps": [],
+        "keyword_misses": [],
+        "evidence": [{"evidence_id": "ev_featstore_latency", "title": "x"}],
+        "persona": {"persona_id": "technical"},
+        "bank_hits": [
+            {"id": "qb_first", "q": "First question?", "difficulty": "mid"},
+            {"id": "qb_second", "q": "Second unused question?", "difficulty": "mid"},
+        ],
+        "asked_ids": ["qb_first"],
+    }
+    fu = next_followup(pack, _GOOD_ANSWER, gate_ok=True, turn=0)
+    assert "Second unused" in fu["question"]
+    assert (fu.get("meta") or {}).get("bank_id") == "qb_second"
+
+
+def test_followup_bank_turn_modulo():
+    pack = {
+        "title": "NLP 算法",
+        "gaps": [],
+        "keyword_misses": [],
+        "evidence": [{"evidence_id": "ev_featstore_latency", "title": "x"}],
+        "persona": {"persona_id": "technical"},
+        "bank_hits": [
+            {"id": "qb_a", "q": "Question A?", "difficulty": "mid"},
+            {"id": "qb_b", "q": "Question B?", "difficulty": "mid"},
+        ],
+        "asked_ids": [],
+    }
+    fu = next_followup(pack, _GOOD_ANSWER, gate_ok=True, turn=2)
+    assert "Question A?" in fu["question"]
+    assert (fu.get("meta") or {}).get("bank_id") == "qb_a"
+
+
+def test_followup_challenging_senior_prefix():
+    pack = {
+        "title": "NLP 算法",
+        "gaps": [],
+        "keyword_misses": [],
+        "evidence": [{"evidence_id": "ev_featstore_latency", "title": "x"}],
+        "persona": {"persona_id": "challenging"},
+        "bank_hits": [
+            {"id": "qb_senior", "q": "Hard question?", "difficulty": "senior"},
+        ],
+        "asked_ids": [],
+    }
+    fu = next_followup(pack, _GOOD_ANSWER, gate_ok=True, turn=0)
+    assert fu["question"].startswith("（高压追问）")
+    assert "Hard question?" in fu["question"]

@@ -320,6 +320,13 @@ def next_followup(
     # Rule path (always available)
     chosen = {"hit": None}
 
+    def _pick_bank_hit() -> dict | None:
+        if not bank:
+            return None
+        asked = set(pack.get("asked_ids") or [])
+        ordered = [b for b in bank if b.get("id") not in asked] or list(bank)
+        return ordered[turn % len(ordered)]
+
     def _rules() -> str:
         from .bei_probe import followup_from_probe, probe_star
 
@@ -337,9 +344,7 @@ def next_followup(
             g = gaps[min(turn, len(gaps) - 1)]
             return f"JD 仍有缺口：「{str(g)[:80]}」。你计划如何在到岗前补齐？勿编造未做过的经历。"
         if bank:
-            asked = set(pack.get("asked_ids") or [])
-            ordered = [b for b in bank if b.get("id") not in asked] or list(bank)
-            b = ordered[min(turn, len(ordered) - 1)]
+            b = _pick_bank_hit()
             q = str(b.get("q") or f"结合 {title} 再深入一层：你如何权衡 trade-off？")
             persona_id = (pack.get("persona") or {}).get("persona_id")
             if persona_id == "challenging" and (b.get("difficulty") == "senior"):
@@ -353,6 +358,10 @@ def next_followup(
                 f"如果指标再差 30%，你会怎么定位？"
             )
         return f"为什么你比其他候选人更适合 {title}？请只基于真实经历。"
+
+    bank_hint = _pick_bank_hit()
+    if bank_hint:
+        chosen["hit"] = bank_hint
 
     cfg = load_config()
     system = (
@@ -378,23 +387,31 @@ def next_followup(
         [{"role": "system", "content": system}, {"role": "user", "content": user}],
         config=cfg,
     )
-    bank_hits = pack.get("bank_hits") or []
-    bank_idx = min(turn, max(len(bank_hits) - 1, 0))
-    hit = chosen["hit"] or (bank_hits[bank_idx] if bank_hits else None)
-    meta = {"turn": turn, "gate_ok": gate_ok}
-    if hit:
-        meta["bank_id"] = hit.get("id")
-        meta["difficulty"] = hit.get("difficulty")
+
+    def _build_meta(extra: dict | None = None) -> dict:
+        meta = {"turn": turn, "gate_ok": gate_ok}
+        hit = chosen["hit"]
+        if hit:
+            meta["bank_id"] = hit.get("id")
+            meta["difficulty"] = hit.get("difficulty")
+        if extra:
+            meta.update(extra)
+        return meta
+
     if res.get("used_llm") and res.get("text"):
-        meta["provider"] = res.get("provider")
-        meta["model"] = res.get("model")
         return {
             "question": res["text"].strip().split("\n")[0][:300],
             "mode": "llm",
-            "meta": meta,
+            "meta": _build_meta(
+                {"provider": res.get("provider"), "model": res.get("model")}
+            ),
         }
-    meta["error"] = res.get("error") or ""
-    return {"question": _rules(), "mode": "rules", "meta": meta}
+    question = _rules()
+    return {
+        "question": question,
+        "mode": "rules",
+        "meta": _build_meta({"error": res.get("error") or ""}),
+    }
 
 
 def opening_question(pack: dict) -> str:
