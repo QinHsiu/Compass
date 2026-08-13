@@ -123,3 +123,27 @@ def test_infer_topics_ml_mapping():
 def test_infer_topics_algorithms_extended_keys():
     assert "algorithms" in infer_topics(["动态规划 链表"])
     assert "algorithms" in infer_topics(["回溯 leetcode"])
+
+
+import pytest
+from compass_core.import_questions import BLOCKED_SOURCES, import_questions
+
+
+FIXTURE_Q = Path(__file__).resolve().parent / "fixtures" / "questions" / "local_sample.jsonl"
+
+
+def test_import_local_jsonl(tmp_path: Path):
+    out = import_questions(tmp_path, source="local", file=FIXTURE_Q, rebuild_index=False)
+    assert out["ok"] is True
+    assert out["count"] >= 1
+    path = Path(out["path"])
+    assert path.is_file()
+    bank = load_bank(tmp_path)
+    assert any(r["id"] == "imp_fix_001" for r in bank)
+
+
+def test_import_blocks_unlicensed_voice(tmp_path: Path):
+    with pytest.raises(ValueError) as ei:
+        import_questions(tmp_path, source="voice-interview")
+    assert "curated-bigtech" in str(ei.value)
+    assert "voice-interview" in BLOCKED_SOURCES

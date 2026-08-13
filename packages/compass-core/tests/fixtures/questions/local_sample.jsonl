@@ -1,0 +1,1 @@
+{"id": "imp_fix_001", "q": "How does ISR work in Kafka?", "topic": "backend", "tags": ["kafka", "replication"], "difficulty": "mid", "company": ["bytedance"], "position": "backend", "round": "onsite", "skill_tags": ["kafka"], "answer": "ISR = in-sync replicas; leader waits for ISR ack; shrinking ISR vs data loss.", "answer_kind": "outline", "pack": "local", "source": "fixture"}
