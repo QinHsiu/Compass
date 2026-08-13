@@ -28,8 +28,16 @@ def _read_jsonl(path: Path) -> tuple[list[dict], int]:
         if not ln.strip():
             continue
         try:
-            rows.append(validate_record(json.loads(ln)))
+            raw = json.loads(ln)
         except json.JSONDecodeError:
+            skipped_malformed += 1
+            continue
+        if not isinstance(raw, dict):
+            skipped_malformed += 1
+            continue
+        try:
+            rows.append(validate_record(raw))
+        except (TypeError, ValueError):
             skipped_malformed += 1
     return rows, skipped_malformed
 

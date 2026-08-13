@@ -90,10 +90,15 @@ def load_bank(extra_root: Path | None = None) -> list[dict]:
                 continue
             try:
                 raw = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(raw, dict):
+                continue
+            try:
                 rec = validate_record(raw)
                 if default_pack and not str(raw.get("pack") or "").strip():
                     rec["pack"] = default_pack
-            except json.JSONDecodeError:
+            except (TypeError, ValueError):
                 continue
             qid = rec.get("id") or ""
             if qid in seen:

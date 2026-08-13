@@ -26,7 +26,11 @@ def attach_evidence(
         ev_skills = {_norm(x) for x in (raw_skills or [])}
         hit = skills & ev_skills
         if hit:
-            eid = getattr(ev, "id", None) or (ev.get("id") if isinstance(ev, dict) else None)
+            eid = getattr(ev, "id", None)
+            if eid is None and isinstance(ev, dict):
+                eid = ev.get("id")
+            if not isinstance(eid, str) or not eid.strip():
+                continue
             matched_ids.append(eid)
             overlap |= hit
     kws = {_norm(x) for x in (jd_keywords or []) if _norm(x)}

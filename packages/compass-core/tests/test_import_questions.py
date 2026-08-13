@@ -231,6 +231,43 @@ def test_import_local_skips_malformed_json(tmp_path: Path):
     assert any(r["id"] == "good_1" for r in bank)
 
 
+def test_import_local_skips_non_object_json(tmp_path: Path):
+    """Valid JSON that is not a dict must not abort import (TypeError from validate_record)."""
+    src = tmp_path / "non_objects.jsonl"
+    good = json.dumps({"id": "obj_ok", "q": "Still valid?"}, ensure_ascii=False)
+    src.write_text(
+        "\n".join([
+            "null",
+            "[]",
+            '"just a string"',
+            "42",
+            "true",
+            good,
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    out = import_questions(tmp_path, source="local", file=src)
+    assert out["ok"] is True
+    assert out["count"] == 1
+    assert out["skipped_malformed"] == 5
+    bank = load_bank(tmp_path)
+    assert any(r["id"] == "obj_ok" for r in bank)
+
+
+def test_load_bank_skips_non_object_jsonl(tmp_path: Path):
+    """load_bank must skip non-dict JSONL rows without aborting."""
+    qdir = tmp_path / "questions" / "imported"
+    qdir.mkdir(parents=True)
+    good = json.dumps({"id": "load_ok", "q": "Loaded?", "pack": "local"}, ensure_ascii=False)
+    (qdir / "weird.jsonl").write_text(
+        "\n".join(["null", "[]", '"x"', "1", good]) + "\n",
+        encoding="utf-8",
+    )
+    bank = load_bank(tmp_path)
+    assert sum(1 for r in bank if r.get("id") == "load_ok") == 1
+
+
 def test_domain_packs_load():
     from compass_core.questions import ASSETS, load_bank
 
@@ -304,6 +341,28 @@ def test_attach_evidence_by_skill_tags():
     assert "kafka" in out["matched_jd_keywords"]
     assert "kafka" in out["skill_overlap"]
     assert out["id"] == "qb_t_kafka"
+
+
+def test_attach_evidence_skips_missing_or_non_string_ids():
+    """matched_evidence_ids must be list[str] only — never None / empty / non-str."""
+    q = validate_record({
+        "id": "qb_t_ev",
+        "q": "Kafka?",
+        "skill_tags": ["kafka"],
+        "tags": ["kafka"],
+    })
+    ev = [
+        {"skills": ["kafka"]},  # missing id
+        {"id": "", "skills": ["kafka"]},
+        {"id": "   ", "skills": ["kafka"]},
+        {"id": 123, "skills": ["kafka"]},
+        {"id": None, "skills": ["kafka"]},
+        EvidenceItem(id="ev_ok", title="ok", skills=["kafka"], actions="a"),
+    ]
+    out = attach_evidence(q, ev)
+    assert out["matched_evidence_ids"] == ["ev_ok"]
+    assert all(isinstance(x, str) and x.strip() for x in out["matched_evidence_ids"])
+    assert None not in out["matched_evidence_ids"]
 
 
 from compass_core.interview_persona import pick_persona
