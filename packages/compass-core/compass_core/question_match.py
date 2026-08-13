@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .evidence import EvidenceItem
+from .interview_persona import PERSONA_TOPIC_BIAS
 
 
 def _norm(s: str) -> str:
@@ -41,3 +42,34 @@ def attach_evidence_many(
     jd_keywords: list[str] | None = None,
 ) -> list[dict]:
     return [attach_evidence(q, evidence, jd_keywords) for q in questions]
+
+
+def rank_for_persona(hits: list[dict], persona: dict, *, limit: int = 12) -> list[dict]:
+    pid = (persona or {}).get("persona_id") or "technical"
+    bias = {x.lower() for x in PERSONA_TOPIC_BIAS.get(pid, ())}
+
+    def _boost(h: dict) -> float:
+        score = float(h.get("score") or 0.0)
+        blob = " ".join(
+            [
+                str(h.get("pack") or ""),
+                str(h.get("topic") or ""),
+                str(h.get("round") or ""),
+                str(h.get("difficulty") or ""),
+                " ".join(h.get("tags") or []),
+                " ".join(h.get("persona_affinity") or []),
+            ]
+        ).lower()
+        if pid in {str(x).lower() for x in (h.get("persona_affinity") or [])}:
+            score += 3.0
+        if any(b in blob for b in bias):
+            score += 2.0
+        return score
+
+    ranked = sorted(hits, key=_boost, reverse=True)
+    out = []
+    for h in ranked[:limit]:
+        row = dict(h)
+        row["persona_score"] = _boost(h)
+        out.append(row)
+    return out

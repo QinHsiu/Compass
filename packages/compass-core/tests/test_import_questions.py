@@ -3,7 +3,28 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from compass_core.evidence import build_index
 from compass_core.questions import infer_topics, load_bank, search_questions, validate_record
+
+REPO = Path(__file__).resolve().parents[3]
+FIXTURE = REPO / "content" / "fixtures" / "demo"
+
+
+@pytest.fixture()
+def root(tmp_path: Path) -> Path:
+    ev = tmp_path / "evidence"
+    ev.mkdir()
+    for p in (FIXTURE / "evidence").glob("*.md"):
+        (ev / p.name).write_text(p.read_text(encoding="utf-8"), encoding="utf-8")
+    build_index(tmp_path)
+    (tmp_path / "profile").mkdir()
+    (tmp_path / "profile" / "profile.json").write_text(
+        (FIXTURE / "profile" / "profile.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    return tmp_path
 
 
 def test_validate_record_fills_defaults():
@@ -248,3 +269,29 @@ def test_attach_evidence_by_skill_tags():
     assert "kafka" in out["matched_jd_keywords"]
     assert "kafka" in out["skill_overlap"]
     assert out["id"] == "qb_t_kafka"
+
+
+from compass_core.interview_persona import pick_persona
+from compass_core.question_match import rank_for_persona
+
+
+def test_rank_for_persona_technical_prefers_cvllm():
+    hits = [
+        validate_record({"id": "h", "q": "Tell me about a conflict", "pack": "bank", "topic": "behavioral", "persona_affinity": ["hr"]}),
+        validate_record({"id": "t", "q": "Explain LoRA", "pack": "cv-llm", "tags": ["lora"], "persona_affinity": ["technical"]}),
+    ]
+    persona = {"persona_id": "technical"}
+    ranked = rank_for_persona(hits, persona, limit=2)
+    assert ranked[0]["id"] == "t"
+
+
+def test_build_pack_persona_bank(root: Path):
+    from compass_core.interview import build_pack
+    from compass_core.match import match_and_save
+
+    text = "公司：ExampleAI\n职位：大模型算法工程师\n必须：Transformer、LLM、PyTorch"
+    m = match_and_save(root, text)
+    pack = build_pack(root, m.job_id)
+    assert pack.get("persona", {}).get("persona_id")
+    assert pack.get("persona_bank") is True
+    assert isinstance(pack.get("bank_hits"), list)

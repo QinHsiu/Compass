@@ -32,6 +32,14 @@ PERSONAS = {
 }
 
 
+PERSONA_TOPIC_BIAS = {
+    "technical": ("cv-llm", "nlp", "mldl", "algo", "llm", "system-design", "ml"),
+    "challenging": ("curated-bigtech", "algo", "incident", "scale"),
+    "supportive": ("behavioral", "junior"),
+    "hr": ("hr", "behavioral", "leadership"),
+}
+
+
 def pick_persona(jd: ParsedJD, match_explain: dict | None = None) -> dict:
     blob = f"{jd.title} {jd.company} {' '.join(jd.hard_requirements[:8])}".lower()
     band = (match_explain or {}).get("recommendation") or ""

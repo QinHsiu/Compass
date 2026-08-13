@@ -62,6 +62,13 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
 
     persona = pick_persona(jd, match.match_explain)
 
+    from .question_match import attach_evidence_many, rank_for_persona
+
+    bank_hits = rank_for_persona(bank_hits, persona, limit=12)
+    bank_hits = attach_evidence_many(
+        bank_hits, list(evidence.values()), jd_keywords=jd.keywords
+    )
+
     from .storybank import top_stories
     from .story_vault import recommend_stories
 
@@ -98,6 +105,7 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "requirement_matrix": match.requirement_matrix,
         "match_explain": match.match_explain,
         "persona": persona,
+        "persona_bank": True,
         "bank_deduped": True,
         "stories": stories,
         "grade": match.grade,
