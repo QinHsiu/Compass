@@ -225,3 +225,26 @@ def test_company_pack_baidu_meituan_huawei():
         hits = search_company_pack(co, limit=8)
         assert len(hits) >= 2, co
         assert all(hit.get("q") for hit in hits)
+
+
+from compass_core.evidence import EvidenceItem
+from compass_core.question_match import attach_evidence
+
+
+def test_attach_evidence_by_skill_tags():
+    q = validate_record({
+        "id": "qb_t_kafka",
+        "q": "Explain Kafka ISR.",
+        "skill_tags": ["kafka", "replication"],
+        "tags": ["kafka"],
+    })
+    ev = [
+        EvidenceItem(id="ev_kafka_incident", title="ISR shrink", skills=["kafka", "java"], actions="fixed ISR"),
+        EvidenceItem(id="ev_p99_query", title="SQL", skills=["sql"], actions="index"),
+    ]
+    out = attach_evidence(q, ev, jd_keywords=["kafka", "golang"])
+    assert "ev_kafka_incident" in out["matched_evidence_ids"]
+    assert "ev_p99_query" not in out["matched_evidence_ids"]
+    assert "kafka" in out["matched_jd_keywords"]
+    assert "kafka" in out["skill_overlap"]
+    assert out["id"] == "qb_t_kafka"
