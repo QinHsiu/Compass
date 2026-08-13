@@ -341,3 +341,27 @@ def format_bank_section(hits: list[dict], lang: str = "zh") -> str:
 
 def bank_section_title(lang: str = "zh") -> str:
     return _SECTION_TITLE.get((lang or "zh")[:2], _SECTION_TITLE["en"])
+
+
+def bank_search_args(msg: dict) -> dict:
+    limit = int(msg.get("limit") or 12)
+    limit = max(1, min(limit, 50))
+    return {
+        "query": (msg.get("query") or msg.get("q") or "").strip() or "llm",
+        "pack": (msg.get("pack") or "").strip() or None,
+        "difficulty": (msg.get("difficulty") or "").strip() or None,
+        "company": (msg.get("company") or "").strip() or None,
+        "lang": (msg.get("lang") or "zh").lower()[:2],
+        "limit": limit,
+        "semantic": bool(msg.get("semantic")),
+    }
+
+
+def get_question(qid: str, extra_root: Path | None = None) -> dict | None:
+    qid = (qid or "").strip()
+    if not qid:
+        return None
+    for r in load_bank(extra_root):
+        if r.get("id") == qid:
+            return r
+    return None

@@ -37,7 +37,7 @@ from compass_core.life import (  # noqa: E402
 from compass_core.llm import describe_config  # noqa: E402
 from compass_core.match import match_and_save  # noqa: E402
 from compass_core.paths import content_root, ensure_dirs  # noqa: E402
-from compass_core.questions import load_bank, search_questions  # noqa: E402
+from compass_core.questions import bank_search_args, get_question, load_bank, search_questions  # noqa: E402
 from compass_core.resume import apply_and_save  # noqa: E402
 from compass_core.timeline import build_timeline, render_timeline_html  # noqa: E402
 from compass_core.track import upsert  # noqa: E402
@@ -373,22 +373,33 @@ async def ws_app(websocket: WebSocket):
                     await websocket.send_json({"type": "error", "message": str(e)})
                 continue
             if mtype == "search_bank":
-                query = msg.get("query") or "llm agent rag"
-                limit = int(msg.get("limit") or 12)
-                semantic = bool(msg.get("semantic"))
-                lang = (msg.get("lang") or "zh").lower()[:2]
-                if semantic:
+                args = bank_search_args(msg)
+                if args["semantic"]:
                     from compass_core.rag import semantic_search
 
-                    hits = semantic_search(root, query, k=limit, lang=lang)
+                    hits = semantic_search(root, args["query"], k=args["limit"], lang=args["lang"])
+                    if args["pack"] or args["difficulty"] or args["company"]:
+                        hits = [
+                            h
+                            for h in hits
+                            if (not args["pack"] or str(h.get("pack") or "") == args["pack"])
+                            and (not args["difficulty"] or str(h.get("difficulty") or "") == args["difficulty"])
+                            and (
+                                not args["company"]
+                                or args["company"].lower()
+                                in " ".join(str(c).lower() for c in (h.get("company") or []))
+                            )
+                        ]
                     backend = "semantic"
                 else:
                     hits = search_questions(
-                        query,
-                        keywords=["llm", "agent", "rag"],
-                        limit=limit,
+                        args["query"],
+                        limit=args["limit"],
                         extra_root=root,
-                        lang=lang,
+                        lang=args["lang"],
+                        pack=args["pack"],
+                        difficulty=args["difficulty"],
+                        company=args["company"],
                     )
                     backend = "token"
                 await websocket.send_json(
@@ -397,7 +408,21 @@ async def ws_app(websocket: WebSocket):
                         "backend": backend,
                         "total": len(load_bank(root)),
                         "hits": hits,
-                        "lang": lang,
+                        "lang": args["lang"],
+                    }
+                )
+                continue
+            if mtype == "practice_question":
+                qid = (msg.get("id") or "").strip()
+                hit = get_question(qid, extra_root=root)
+                if not hit:
+                    await websocket.send_json({"type": "error", "message": f"unknown question {qid}"})
+                    continue
+                await websocket.send_json(
+                    {
+                        "type": "practice_question",
+                        "hit": hit,
+                        "starter_code": hit.get("starter_code") or "",
                     }
                 )
                 continue

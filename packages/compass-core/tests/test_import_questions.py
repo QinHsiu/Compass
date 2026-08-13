@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from compass_core.evidence import build_index
-from compass_core.questions import infer_topics, load_bank, search_questions, validate_record
+from compass_core.questions import (
+    bank_search_args,
+    infer_topics,
+    load_bank,
+    search_questions,
+    validate_record,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 FIXTURE = REPO / "content" / "fixtures" / "demo"
@@ -25,6 +31,21 @@ def root(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return tmp_path
+
+
+def test_bank_search_args_and_lookup():
+    args = bank_search_args({"query": "LoRA", "pack": "cv-llm", "difficulty": "mid", "limit": 5})
+    assert args["pack"] == "cv-llm"
+    assert args["difficulty"] == "mid"
+    hits = search_questions(
+        args["query"],
+        pack=args["pack"],
+        difficulty=args["difficulty"],
+        limit=args["limit"],
+    )
+    assert hits
+    algo = [r for r in load_bank() if r.get("id") == "qb_algop_001"]
+    assert algo and algo[0].get("starter_code")
 
 
 def test_validate_record_fills_defaults():
