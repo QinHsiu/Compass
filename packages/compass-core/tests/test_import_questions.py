@@ -295,3 +295,28 @@ def test_build_pack_persona_bank(root: Path):
     assert pack.get("persona", {}).get("persona_id")
     assert pack.get("persona_bank") is True
     assert isinstance(pack.get("bank_hits"), list)
+
+
+from compass_core.interview import next_followup
+
+
+def test_followup_uses_bank_id_and_meta():
+    pack = {
+        "title": "NLP 算法",
+        "gaps": [],
+        "keyword_misses": [],
+        "evidence": [{"evidence_id": "ev_featstore_latency", "title": "x"}],
+        "persona": {"persona_id": "technical"},
+        "bank_hits": [
+            {"id": "qb_nlp_002", "q": "What does BERT pretrain?", "difficulty": "mid"},
+        ],
+        "asked_ids": [],
+    }
+    fu = next_followup(
+        pack,
+        "我们把 p99 做到 45ms ev_featstore_latency，BERT MLM 预训练后做领域微调",
+        gate_ok=True,
+        turn=0,
+    )
+    assert fu["question"]
+    assert (fu.get("meta") or {}).get("bank_id") == "qb_nlp_002"
