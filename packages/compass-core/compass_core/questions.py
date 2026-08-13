@@ -196,6 +196,11 @@ def search_questions(
     bank: list[dict] | None = None,
     extra_root: Path | None = None,
     lang: str = "zh",
+    company: str | None = None,
+    difficulty: str | None = None,
+    pack: str | None = None,
+    position: str | None = None,
+    round: str | None = None,
 ) -> list[dict]:
     """Token overlap retrieval; returns questions with score + bilingual fields."""
     items = bank if bank is not None else load_bank(extra_root)
@@ -203,6 +208,28 @@ def search_questions(
     for kw in keywords or []:
         q_tokens |= _tokenize(kw)
     topic_set = {t.lower() for t in (topics or [])}
+
+    def _ok(it: dict) -> bool:
+        if pack and str(it.get("pack") or "") != pack:
+            return False
+        if difficulty and str(it.get("difficulty") or "") != difficulty:
+            return False
+        if topic_set and (it.get("topic") or "").lower() not in topic_set and not (
+            set(it.get("tags") or []) & topic_set
+        ):
+            # keep existing topic boost behavior; do not hard-filter on topics unless pack set
+            pass
+        if company:
+            blob = " ".join(str(c).lower() for c in (it.get("company") or []))
+            if company.lower() not in blob:
+                return False
+        if position and str(it.get("position") or "").lower() != position.lower():
+            return False
+        if round and str(it.get("round") or "").lower() != round.lower():
+            return False
+        return True
+
+    items = [it for it in items if _ok(it)]
 
     scored: list[tuple[float, dict]] = []
     for it in items:
@@ -212,6 +239,9 @@ def search_questions(
                 it.get("q_zh") or "",
                 it.get("topic") or "",
                 " ".join(it.get("tags") or []),
+                it.get("pack") or "",
+                " ".join(str(c) for c in (it.get("company") or [])),
+                " ".join(it.get("skill_tags") or []),
             ]
         )
         tokens = _tokenize(text)
@@ -246,7 +276,10 @@ def infer_topics(keywords: list[str]) -> list[str]:
         ("devops", ["kubernetes", "k8s", "docker", "devops", "sre", "linux", "redis"]),
         ("system-design", ["distributed", "scale", "architecture"]),
         ("behavioral", ["ownership", "leadership"]),
-        ("algorithms", ["algorithm", "sql", "leetcode"]),
+        ("cv", ["cv", "computer vision", "yolo", "diffusion", "clip", "vit", "检测", "分割"]),
+        ("nlp", ["nlp", "bert", "ner", "tokenizer", "预训练", "词向量"]),
+        ("ml", ["gradient", "正则", "cnn", "rnn", "optimizer", "batchnorm"]),
+        ("algorithms", ["algorithm", "sql", "leetcode", "链表", "动态规划", "回溯"]),
     ]
     for topic, keys in mapping:
         if any(k in blob for k in keys):

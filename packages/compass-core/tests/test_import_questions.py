@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from compass_core.questions import load_bank, validate_record
+from compass_core.questions import load_bank, search_questions, validate_record
 
 
 def test_validate_record_fills_defaults():
@@ -43,3 +43,18 @@ def test_load_bank_reads_imported_dir(tmp_path: Path):
     bank = load_bank(tmp_path)
     ids = {r["id"] for r in bank}
     assert "imp_local_001" in ids
+
+
+def test_search_questions_filters_pack_and_difficulty():
+    bank = [
+        validate_record({"id": "a", "q": "What is a Transformer encoder?", "pack": "cv-llm", "difficulty": "senior", "tags": ["transformer"]}),
+        validate_record({"id": "b", "q": "What is a Transformer encoder?", "pack": "nlp", "difficulty": "junior", "tags": ["transformer"]}),
+    ]
+    hits = search_questions(
+        "transformer",
+        bank=bank,
+        pack="cv-llm",
+        difficulty="senior",
+        limit=10,
+    )
+    assert [h["id"] for h in hits] == ["a"]
