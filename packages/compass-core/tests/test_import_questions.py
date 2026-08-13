@@ -166,3 +166,30 @@ def test_import_local_skips_malformed_json(tmp_path: Path):
     assert out["skipped_malformed"] >= 1
     bank = load_bank(tmp_path)
     assert any(r["id"] == "good_1" for r in bank)
+
+
+def test_domain_packs_load():
+    from compass_core.questions import ASSETS, load_bank
+
+    bank = load_bank()
+    packs = {r.get("pack") for r in bank}
+    assert "cv-llm" in packs
+    assert "nlp" in packs
+    assert "mldl" in packs
+    cv = [r for r in bank if r.get("pack") == "cv-llm"]
+    nlp = [r for r in bank if r.get("pack") == "nlp"]
+    mldl = [r for r in bank if r.get("pack") == "mldl"]
+    assert len(cv) >= 12
+    assert len(nlp) >= 10
+    assert len(mldl) >= 10
+    assert any("transformer" in (r.get("tags") or []) for r in cv)
+    assert any("diffusion" in (r.get("tags") or []) for r in cv)
+    assert any("rlhf" in (r.get("tags") or []) for r in cv)
+    assert all(r.get("answer_kind") in ("outline", "none") for r in cv + nlp + mldl)
+    assert (ASSETS / "cv_llm.jsonl").is_file()
+
+
+def test_search_cv_llm_transformer():
+    hits = search_questions("transformer attention diffusion", pack="cv-llm", limit=5)
+    assert hits
+    assert all(h.get("pack") == "cv-llm" for h in hits)
