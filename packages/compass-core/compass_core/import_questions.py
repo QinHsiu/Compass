@@ -7,8 +7,8 @@ from pathlib import Path
 
 from .questions import ASSETS, validate_record
 
-ALLOWED_SOURCES = ("curated-bigtech", "cv-llm", "nlp", "mldl", "algo", "local")
-BLOCKED_SOURCES = ("voice-interview", "0voice", "interview_internal_reference")
+ALLOWED_SOURCES: tuple[str, ...] = ("curated-bigtech", "cv-llm", "nlp", "mldl", "algo", "local")
+BLOCKED_SOURCES: tuple[str, ...] = ("voice-interview", "0voice", "interview_internal_reference")
 
 _CURATED_COPY = {
     "cv-llm": "cv_llm.jsonl",
@@ -19,18 +19,19 @@ _CURATED_COPY = {
 }
 
 
-def _read_jsonl(path: Path) -> list[dict]:
-    rows = []
+def _read_jsonl(path: Path) -> tuple[list[dict], int]:
+    rows: list[dict] = []
+    skipped_malformed = 0
     if not path.is_file():
-        return rows
+        return rows, skipped_malformed
     for ln in path.read_text(encoding="utf-8").splitlines():
         if not ln.strip():
             continue
         try:
             rows.append(validate_record(json.loads(ln)))
         except json.JSONDecodeError:
-            continue
-    return rows
+            skipped_malformed += 1
+    return rows, skipped_malformed
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> Path:
@@ -61,18 +62,27 @@ def import_questions(
     if src == "local":
         if file is None:
             raise ValueError("local import requires file=")
-        rows = _read_jsonl(Path(file))
+        src_file = Path(file)
+        if not src_file.is_file():
+            raise ValueError(f"local import file not found: {src_file}")
+        rows, skipped_malformed = _read_jsonl(src_file)
         for r in rows:
             r["pack"] = r.get("pack") or "local"
     else:
         asset_name = _CURATED_COPY[src]
-        rows = _read_jsonl(ASSETS / asset_name)
+        rows, skipped_malformed = _read_jsonl(ASSETS / asset_name)
         for r in rows:
             r["pack"] = r.get("pack") or src
 
     dest = Path(root) / "questions" / "imported" / f"{src}.jsonl"
     _write_jsonl(dest, rows)
-    info: dict = {"ok": True, "source": src, "count": len(rows), "path": str(dest)}
+    info: dict = {
+        "ok": True,
+        "source": src,
+        "count": len(rows),
+        "path": str(dest),
+        "skipped_malformed": skipped_malformed,
+    }
     if rebuild_index:
         from .rag import index_questions
 

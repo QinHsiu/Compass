@@ -147,3 +147,22 @@ def test_import_blocks_unlicensed_voice(tmp_path: Path):
         import_questions(tmp_path, source="voice-interview")
     assert "curated-bigtech" in str(ei.value)
     assert "voice-interview" in BLOCKED_SOURCES
+
+
+def test_import_local_missing_file_raises(tmp_path: Path):
+    missing = tmp_path / "no_such.jsonl"
+    with pytest.raises(ValueError) as ei:
+        import_questions(tmp_path, source="local", file=missing)
+    assert "file not found" in str(ei.value).lower() or "not found" in str(ei.value).lower()
+
+
+def test_import_local_skips_malformed_json(tmp_path: Path):
+    src = tmp_path / "mixed.jsonl"
+    good = json.dumps({"id": "good_1", "q": "Valid question?"}, ensure_ascii=False)
+    src.write_text(good + "\n{not valid json\n", encoding="utf-8")
+    out = import_questions(tmp_path, source="local", file=src)
+    assert out["ok"] is True
+    assert out["count"] == 1
+    assert out["skipped_malformed"] >= 1
+    bank = load_bank(tmp_path)
+    assert any(r["id"] == "good_1" for r in bank)
