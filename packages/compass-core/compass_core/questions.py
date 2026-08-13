@@ -38,6 +38,10 @@ def validate_record(row: dict) -> dict:
     out = dict(row or {})
     out["id"] = str(out.get("id") or "").strip() or "qb_anon"
     out["q"] = str(out.get("q") or out.get("question") or "").strip()
+    if "difficulty" not in row and row.get("level"):
+        mapped = _DIFF_MAP.get(str(row["level"]).lower())
+        if mapped:
+            out["difficulty"] = mapped
     diff = str(out.get("difficulty") or "mid").strip().lower()
     out["difficulty"] = _DIFF_MAP.get(diff, _DIFF_MAP.get(str(out.get("difficulty") or "").strip(), "mid"))
     tags = out.get("tags") or []

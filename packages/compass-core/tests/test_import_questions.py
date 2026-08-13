@@ -204,3 +204,17 @@ def test_algo_pack_starter_code():
     coded = [r for r in bank if r.get("starter_code")]
     assert len(coded) >= 5
     assert "def " in coded[0]["starter_code"]
+
+
+def test_company_pack_baidu_meituan_huawei():
+    from compass_core.company_pack import match_company_key, search_company_pack
+
+    assert match_company_key("百度") == "baidu"
+    assert match_company_key("美团") == "meituan"
+    assert match_company_key("华为云计算") == "huawei"
+    assert match_company_key("京东零售") == "jingdong"
+    assert match_company_key("滴滴出行") == "didi"
+    for co in ("baidu", "meituan", "huawei", "jingdong", "didi"):
+        hits = search_company_pack(co, limit=8)
+        assert len(hits) >= 2, co
+        assert all(hits[0].get("q"))
