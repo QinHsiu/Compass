@@ -11,6 +11,68 @@ ASSETS = Path(__file__).resolve().parent / "assets" / "questions"
 BANK_PATH = ASSETS / "bank.jsonl"
 ZH_PATH = ASSETS / "i18n_zh.json"
 
+DIFFICULTIES = ("junior", "mid", "senior")
+_DIFF_MAP = {
+    "junior": "junior",
+    "mid": "mid",
+    "senior": "senior",
+    "初级": "junior",
+    "中级": "mid",
+    "高级": "senior",
+    "easy": "junior",
+    "medium": "mid",
+    "hard": "senior",
+}
+PACK_ASSET_FILES = (
+    "bank.jsonl",
+    "llm_agent.jsonl",
+    "cv_llm.jsonl",
+    "nlp.jsonl",
+    "mldl.jsonl",
+    "algo.jsonl",
+)
+
+
+def validate_record(row: dict) -> dict:
+    """Normalize a bank row. Unknown keys are kept."""
+    source = row or {}
+    out = dict(source)
+    out["id"] = str(out.get("id") or "").strip() or "qb_anon"
+    out["q"] = str(out.get("q") or out.get("question") or "").strip()
+    if "difficulty" not in source and source.get("level"):
+        mapped = _DIFF_MAP.get(str(source["level"]).lower())
+        if mapped:
+            out["difficulty"] = mapped
+    diff = str(out.get("difficulty") or "mid").strip().lower()
+    out["difficulty"] = _DIFF_MAP.get(diff, _DIFF_MAP.get(str(out.get("difficulty") or "").strip(), "mid"))
+    tags = out.get("tags") or []
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    out["tags"] = list(tags)
+    out["topic"] = str(out.get("topic") or "general")
+    out["source"] = str(out.get("source") or "Compass curated")
+    out["source_url"] = str(out.get("source_url") or "")
+    out["pack"] = str(out.get("pack") or "bank")
+    skills = out.get("skill_tags") or list(out["tags"])
+    if isinstance(skills, str):
+        skills = [s.strip() for s in skills.split(",") if s.strip()]
+    out["skill_tags"] = list(skills)
+    aff = out.get("persona_affinity") or []
+    if isinstance(aff, str):
+        aff = [aff]
+    out["persona_affinity"] = [str(a) for a in aff]
+    companies = out.get("company") or []
+    if isinstance(companies, str):
+        companies = [companies]
+    out["company"] = [str(c) for c in companies]
+    out["position"] = str(out.get("position") or "")
+    out["round"] = str(out.get("round") or "")
+    out["answer"] = str(out.get("answer") or "")
+    out["answer_kind"] = str(out.get("answer_kind") or ("outline" if out["answer"] else "none"))
+    out["starter_code"] = str(out.get("starter_code") or "")
+    out["animation_url"] = str(out.get("animation_url") or "")
+    return out
+
 
 def _tokenize(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9\u4e00-\u9fff+#.]{2,}", (text or "").lower()))
@@ -18,19 +80,43 @@ def _tokenize(text: str) -> set[str]:
 
 def load_bank(extra_root: Path | None = None) -> list[dict]:
     rows: list[dict] = []
-    for name in ("bank.jsonl", "llm_agent.jsonl"):
-        path = ASSETS / name
-        if path.is_file():
-            for ln in path.read_text(encoding="utf-8").splitlines():
-                if ln.strip():
-                    rows.append(json.loads(ln))
+    seen: set[str] = set()
+
+    def _add_file(path: Path, *, default_pack: str | None = None) -> None:
+        if not path.is_file():
+            return
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            if not ln.strip():
+                continue
+            try:
+                raw = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(raw, dict):
+                continue
+            try:
+                rec = validate_record(raw)
+                if default_pack and not str(raw.get("pack") or "").strip():
+                    rec["pack"] = default_pack
+            except (TypeError, ValueError):
+                continue
+            qid = rec.get("id") or ""
+            if qid in seen:
+                continue
+            seen.add(qid)
+            rows.append(rec)
+
+    for name in PACK_ASSET_FILES:
+        _add_file(ASSETS / name)
+    _add_file(ASSETS / "company_packs.jsonl", default_pack="curated-bigtech")
     if extra_root:
-        for name in ("extra.jsonl", "llm_agent.jsonl"):
-            extra = Path(extra_root) / "questions" / name
-            if extra.is_file():
-                for ln in extra.read_text(encoding="utf-8").splitlines():
-                    if ln.strip():
-                        rows.append(json.loads(ln))
+        qdir = Path(extra_root) / "questions"
+        _add_file(qdir / "extra.jsonl")
+        _add_file(qdir / "llm_agent.jsonl")
+        imported = qdir / "imported"
+        if imported.is_dir():
+            for p in sorted(imported.glob("*.jsonl")):
+                _add_file(p)
     return rows
 
 
@@ -124,6 +210,11 @@ def search_questions(
     bank: list[dict] | None = None,
     extra_root: Path | None = None,
     lang: str = "zh",
+    company: str | None = None,
+    difficulty: str | None = None,
+    pack: str | None = None,
+    position: str | None = None,
+    round: str | None = None,
 ) -> list[dict]:
     """Token overlap retrieval; returns questions with score + bilingual fields."""
     items = bank if bank is not None else load_bank(extra_root)
@@ -131,6 +222,28 @@ def search_questions(
     for kw in keywords or []:
         q_tokens |= _tokenize(kw)
     topic_set = {t.lower() for t in (topics or [])}
+
+    def _ok(it: dict) -> bool:
+        if pack and str(it.get("pack") or "") != pack:
+            return False
+        if difficulty and str(it.get("difficulty") or "") != difficulty:
+            return False
+        if topic_set and (it.get("topic") or "").lower() not in topic_set and not (
+            set(it.get("tags") or []) & topic_set
+        ):
+            # topics are boost-only (never a hard filter), even when pack is set
+            pass
+        if company:
+            blob = " ".join(str(c).lower() for c in (it.get("company") or []))
+            if company.lower() not in blob:
+                return False
+        if position and str(it.get("position") or "").lower() != position.lower():
+            return False
+        if round and str(it.get("round") or "").lower() != round.lower():
+            return False
+        return True
+
+    items = [it for it in items if _ok(it)]
 
     scored: list[tuple[float, dict]] = []
     for it in items:
@@ -140,6 +253,9 @@ def search_questions(
                 it.get("q_zh") or "",
                 it.get("topic") or "",
                 " ".join(it.get("tags") or []),
+                it.get("pack") or "",
+                " ".join(str(c) for c in (it.get("company") or [])),
+                " ".join(it.get("skill_tags") or []),
             ]
         )
         tokens = _tokenize(text)
@@ -174,7 +290,10 @@ def infer_topics(keywords: list[str]) -> list[str]:
         ("devops", ["kubernetes", "k8s", "docker", "devops", "sre", "linux", "redis"]),
         ("system-design", ["distributed", "scale", "architecture"]),
         ("behavioral", ["ownership", "leadership"]),
-        ("algorithms", ["algorithm", "sql", "leetcode"]),
+        ("cv", ["cv", "computer vision", "yolo", "diffusion", "clip", "vit", "检测", "分割"]),
+        ("nlp", ["nlp", "bert", "ner", "tokenizer", "预训练", "词向量"]),
+        ("ml", ["gradient", "正则", "cnn", "rnn", "optimizer", "batchnorm"]),
+        ("algorithms", ["algorithm", "sql", "leetcode", "链表", "动态规划", "回溯"]),
     ]
     for topic, keys in mapping:
         if any(k in blob for k in keys):
@@ -231,3 +350,30 @@ def format_bank_section(hits: list[dict], lang: str = "zh") -> str:
 
 def bank_section_title(lang: str = "zh") -> str:
     return _SECTION_TITLE.get((lang or "zh")[:2], _SECTION_TITLE["en"])
+
+
+def bank_search_args(msg: dict) -> dict:
+    try:
+        limit = int(msg.get("limit") or 12)
+    except (TypeError, ValueError):
+        limit = 12
+    limit = max(1, min(limit, 50))
+    return {
+        "query": (msg.get("query") or msg.get("q") or "").strip() or "llm",
+        "pack": (msg.get("pack") or "").strip() or None,
+        "difficulty": (msg.get("difficulty") or "").strip() or None,
+        "company": (msg.get("company") or "").strip() or None,
+        "lang": (msg.get("lang") or "zh").lower()[:2],
+        "limit": limit,
+        "semantic": bool(msg.get("semantic")),
+    }
+
+
+def get_question(qid: str, extra_root: Path | None = None) -> dict | None:
+    qid = (qid or "").strip()
+    if not qid:
+        return None
+    for r in load_bank(extra_root):
+        if r.get("id") == qid:
+            return r
+    return None

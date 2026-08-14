@@ -245,6 +245,22 @@
             <input type="checkbox" id="bankSemantic"/>
             <span data-i18n="bankSemantic"></span>
           </label>
+          <select id="bankPack">
+            <option value="">pack: all</option>
+            <option value="cv-llm">cv-llm</option>
+            <option value="nlp">nlp</option>
+            <option value="mldl">mldl</option>
+            <option value="algo">algo</option>
+            <option value="bank">bank</option>
+            <option value="curated-bigtech">curated-bigtech</option>
+          </select>
+          <select id="bankDiff">
+            <option value="">difficulty: all</option>
+            <option value="junior">junior</option>
+            <option value="mid">mid</option>
+            <option value="senior">senior</option>
+          </select>
+          <input type="text" id="bankCompany" placeholder="company" style="width:8rem"/>
           <button class="primary" id="btnBank" data-i18n="btnSearch"></button>
         </div>
         <div class="bank-list" id="bankOut"></div>

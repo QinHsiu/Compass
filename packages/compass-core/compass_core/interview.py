@@ -62,6 +62,13 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
 
     persona = pick_persona(jd, match.match_explain)
 
+    from .question_match import attach_evidence_many, rank_for_persona
+
+    bank_hits = rank_for_persona(bank_hits, persona, limit=12)
+    bank_hits = attach_evidence_many(
+        bank_hits, list(evidence.values()), jd_keywords=jd.keywords
+    )
+
     from .storybank import top_stories
     from .story_vault import recommend_stories
 
@@ -98,6 +105,7 @@ def build_pack(root: Path, job_id: str, lang: str = "zh") -> dict:
         "requirement_matrix": match.requirement_matrix,
         "match_explain": match.match_explain,
         "persona": persona,
+        "persona_bank": True,
         "bank_deduped": True,
         "stories": stories,
         "grade": match.grade,
@@ -310,6 +318,15 @@ def next_followup(
     title = pack.get("title") or "this role"
 
     # Rule path (always available)
+    chosen = {"hit": None}
+
+    def _pick_bank_hit() -> dict | None:
+        if not bank:
+            return None
+        asked = set(pack.get("asked_ids") or [])
+        ordered = [b for b in bank if b.get("id") not in asked] or list(bank)
+        return ordered[turn % len(ordered)]
+
     def _rules() -> str:
         from .bei_probe import followup_from_probe, probe_star
 
@@ -327,8 +344,13 @@ def next_followup(
             g = gaps[min(turn, len(gaps) - 1)]
             return f"JD 仍有缺口：「{str(g)[:80]}」。你计划如何在到岗前补齐？勿编造未做过的经历。"
         if bank:
-            b = bank[min(turn, len(bank) - 1)]
-            return str(b.get("q") or f"结合 {title} 再深入一层：你如何权衡 trade-off？")
+            b = _pick_bank_hit()
+            q = str(b.get("q") or f"结合 {title} 再深入一层：你如何权衡 trade-off？")
+            persona_id = (pack.get("persona") or {}).get("persona_id")
+            if persona_id == "challenging" and (b.get("difficulty") == "senior"):
+                q = "（高压追问）" + q
+            chosen["hit"] = b
+            return q
         if evidence:
             ev = evidence[min(turn, len(evidence) - 1)]
             return (
@@ -336,6 +358,10 @@ def next_followup(
                 f"如果指标再差 30%，你会怎么定位？"
             )
         return f"为什么你比其他候选人更适合 {title}？请只基于真实经历。"
+
+    bank_hint = _pick_bank_hit()
+    if bank_hint:
+        chosen["hit"] = bank_hint
 
     cfg = load_config()
     system = (
@@ -361,13 +387,31 @@ def next_followup(
         [{"role": "system", "content": system}, {"role": "user", "content": user}],
         config=cfg,
     )
+
+    def _build_meta(extra: dict | None = None) -> dict:
+        meta = {"turn": turn, "gate_ok": gate_ok}
+        hit = chosen["hit"]
+        if hit:
+            meta["bank_id"] = hit.get("id")
+            meta["difficulty"] = hit.get("difficulty")
+        if extra:
+            meta.update(extra)
+        return meta
+
     if res.get("used_llm") and res.get("text"):
         return {
             "question": res["text"].strip().split("\n")[0][:300],
             "mode": "llm",
-            "meta": {"provider": res.get("provider"), "model": res.get("model")},
+            "meta": _build_meta(
+                {"provider": res.get("provider"), "model": res.get("model")}
+            ),
         }
-    return {"question": _rules(), "mode": "rules", "meta": {"error": res.get("error") or ""}}
+    question = _rules()
+    return {
+        "question": question,
+        "mode": "rules",
+        "meta": _build_meta({"error": res.get("error") or ""}),
+    }
 
 
 def opening_question(pack: dict) -> str:

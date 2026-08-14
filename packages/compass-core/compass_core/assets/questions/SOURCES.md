@@ -35,3 +35,32 @@ python -m compass_core.cli crawl-llm --root content
 
 Crawl sources (public raw only): see `compass_core/crawl_llm.py` `SOURCES`.
 Seed questions are Compass-curated for RAG / Agent / tool-use / MCP / eval.
+
+## Domain packs (2026-08)
+
+| File | Pack id | Role |
+|:-----|:--------|:-----|
+| `cv_llm.jsonl` | `cv-llm` | AIGC / CV / LLM stems (Compass-rewritten) |
+| `nlp.jsonl` | `nlp` | NLP engineer stems |
+| `mldl.jsonl` | `mldl` | ML/DL concept stems |
+| `algo.jsonl` | `algo` | Algorithm practice + `starter_code` |
+| `company_packs.jsonl` | `curated-bigtech` | 大厂行为/技术追问（含百度/美团/华为/京东/滴滴） |
+
+Refresh into a workspace:
+
+```bash
+python -m compass_core.cli import-questions --root content --source cv-llm
+python -m compass_core.cli import-questions --root content --source nlp
+python -m compass_core.cli import-questions --root content --source mldl
+python -m compass_core.cli import-questions --root content --source algo
+python -m compass_core.cli import-questions --root content --source curated-bigtech
+python -m compass_core.cli import-questions --root content --source local --file path/to/extra.jsonl
+python -m compass_core.cli rag-index --root content
+```
+
+## License / crawl policy
+
+- **Not vendored:** `0voice/interview_internal_reference` (no license). CLI `--source voice-interview` is rejected.
+- Topic URLs on curated rows are **inspiration citations**, not copies of those repositories.
+- `doocs/leetcode`, `itcharge/AlgoNote`, `MisterBooo/LeetCodeAnimation` are linked, not copied.
+- Users may import private JSONL into gitignored `content/questions/imported/`.

@@ -205,6 +205,7 @@
   let currentQ = "";
   let lastJobId = "";
   let monacoEditor = null;
+  let pendingStarter = null;
   const synth = window.speechSynthesis;
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -432,8 +433,23 @@
             (secondary
               ? `<div class="q-sub"><span class="q-sub-label">${esc(secLabel)}</span>${esc(secondary)}</div>`
               : "");
+          const btn = document.createElement("button");
+          btn.textContent = t.bankPractice || "练习";
+          btn.onclick = () => sendApp({ type: "practice_question", id: h.id });
+          d.appendChild(btn);
           box.appendChild(d);
         });
+      } else if (m.type === "practice_question") {
+        if (m.starter_code) {
+          showView("interview");
+          const codeTab = document.querySelector('[data-tab="code"]');
+          if (codeTab) codeTab.click();
+          if (monacoEditor) {
+            monacoEditor.setValue(m.starter_code);
+          } else {
+            pendingStarter = m.starter_code;
+          }
+        }
       } else if (m.type === "export_done") {
         $("pipeStatus").textContent =
           `${t.exportDone}\n${m.html || ""}\n${m.pdf || m.warning || t.exportNoPdf}`;
@@ -549,6 +565,9 @@
       type: "search_bank",
       query: $("bankQ").value,
       semantic: $("bankSemantic").checked,
+      pack: $("bankPack").value,
+      difficulty: $("bankDiff").value,
+      company: $("bankCompany").value,
       limit: 12,
       lang,
     });
@@ -709,12 +728,16 @@
         });
         require(["vs/editor/editor.main"], () => {
           monacoEditor = monaco.editor.create($("editor"), {
-            value: "def solve(nums):\n    # TODO\n    return nums\n",
+            value: pendingStarter || "def solve(nums):\n    # TODO\n    return nums\n",
             language: "python",
             theme: "vs",
             minimap: { enabled: false },
             automaticLayout: true,
           });
+          if (pendingStarter) {
+            monacoEditor.setValue(pendingStarter);
+            pendingStarter = null;
+          }
         });
       }
     };

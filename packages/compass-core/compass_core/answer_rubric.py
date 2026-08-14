@@ -7,7 +7,9 @@ import re
 from .scorecard import DIMENSIONS
 
 
-def score_qa_rubric(question: str, answer: str) -> dict[str, int]:
+def score_qa_rubric(
+    question: str, answer: str, expected_outline: str | None = None
+) -> dict[str, int]:
     """
     Local heuristic (no LLM): substance / structure / relevance / credibility / jd_fit.
     Used by transcript-import → scorecard.
@@ -76,6 +78,16 @@ def score_qa_rubric(question: str, answer: str) -> dict[str, int]:
         r"系统|设计|python|k8s|rag|模型|分布式|architecture|latency", a, re.I
     ):
         jd_fit = max(1, relevance - 1)
+
+    if expected_outline:
+        o_toks = {t for t in re.findall(r"[\w\u4e00-\u9fff]{2,}", expected_outline.lower()) if len(t) > 1}
+        if o_toks:
+            ohit = sum(1 for t in o_toks if t in a_low)
+            oratio = ohit / max(len(o_toks), 1)
+            if oratio >= 0.25:
+                substance = min(5, substance + 1)
+            elif oratio == 0 and len(a) > 40:
+                substance = max(1, substance - 1)
 
     return {
         "substance": int(substance),

@@ -34,6 +34,11 @@ def match_company_key(company: str | None, title: str | None = None) -> str | No
         ("google", ("google", "谷歌")),
         ("meta", ("meta", "facebook", "脸书")),
         ("amazon", ("amazon", "亚马逊", "aws")),
+        ("baidu", ("baidu", "百度")),
+        ("meituan", ("meituan", "美团")),
+        ("huawei", ("huawei", "华为")),
+        ("jingdong", ("jingdong", "jd.com", "京东")),
+        ("didi", ("didi", "滴滴")),
     )
     for canon, aliases in keys:
         if any(a in blob for a in aliases):

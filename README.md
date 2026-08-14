@@ -175,6 +175,7 @@ flowchart LR
 | — | `web` / `live` | **Web 主界面** |
 | — | `studio` | Gradio（可选） |
 | — | `crawl-llm` | 刷新 LLM/Agent 题 |
+| — | `import-questions --source …` | 导入合规题包 / 本地 JSONL |
 
 完整 Skill：[skill/SKILL.md](skill/SKILL.md)
 

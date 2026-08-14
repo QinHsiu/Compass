@@ -1015,6 +1015,24 @@ def cmd_questions(args) -> int:
     return 0
 
 
+def cmd_import_questions(args) -> int:
+    from .import_questions import import_questions
+
+    root = _root(args)
+    try:
+        out = import_questions(
+            root,
+            source=args.source,
+            file=Path(args.file) if getattr(args, "file", None) else None,
+            rebuild_index=bool(getattr(args, "reindex", False)),
+        )
+    except ValueError as e:
+        print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False, indent=2))
+        return 2
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_rag_index(args) -> int:
     from .rag import index_questions
 
@@ -1791,6 +1809,12 @@ def build_parser() -> argparse.ArgumentParser:
     qb.add_argument("--semantic", action="store_true", help="use Chroma RAG when available")
     qb.add_argument("--lang", default="zh", help="ui language for bilingual bank hits (zh/en/ja/es)")
     qb.set_defaults(func=cmd_questions)
+
+    iq = sub.add_parser("import-questions", parents=[parent], help="import curated or local question JSONL")
+    iq.add_argument("--source", required=True, help="curated-bigtech|cv-llm|nlp|mldl|algo|local")
+    iq.add_argument("--file", default=None, help="JSONL path when --source local")
+    iq.add_argument("--reindex", action="store_true", help="rebuild Chroma index after import")
+    iq.set_defaults(func=cmd_import_questions)
 
     rag = sub.add_parser("rag-index", parents=[parent], help="build local question vector index")
     rag.set_defaults(func=cmd_rag_index)

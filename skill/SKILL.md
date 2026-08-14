@@ -189,11 +189,20 @@ python -m compass_core.cli scorecard show --root content --job-id <id>
 python -m compass_core.cli scorecard sync --root content --job-id <id>
 ```
 
-Bank sources: `assets/questions/SOURCES.md`. Extend with `content/questions/extra.jsonl`.
+Bank sources: `assets/questions/SOURCES.md`. Extend with `content/questions/extra.jsonl`, or import curated packs / local JSONL:
 
 ```bash
+python -m compass_core.cli import-questions --root content --source cv-llm
+python -m compass_core.cli import-questions --root content --source nlp
+python -m compass_core.cli import-questions --root content --source mldl
+python -m compass_core.cli import-questions --root content --source algo
+python -m compass_core.cli import-questions --root content --source curated-bigtech
+python -m compass_core.cli import-questions --root content --source local --file path/to/extra.jsonl
 python -m compass_core.cli questions --root content --keywords python,kubernetes,rag --limit 10
+python -m compass_core.cli questions --root content --keywords system-design --company bytedance --limit 5
 ```
+
+`questions` CLI flags: `--keywords`, `--limit`, `--company` (company pack), `--semantic`, `--industry`. Pack / difficulty / company **field** filters for browsing the bank live on **Web 题库** (`apps/interview-live`). Unlicensed dumps (`import-questions --source voice-interview` / 0voice) are blocked.
 
 ### `/diagnose`
 

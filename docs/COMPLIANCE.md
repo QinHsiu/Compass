@@ -10,6 +10,7 @@
 - Public remote job APIs the user opts into (`discover --source feeds`: Remotive / Arbeitnow; configurable `content/feeds.yml`)
 - Local session files the user exports themselves (`session import`)
 - User-exported job-board HTML parsed via `session scout-html --i-accept-tos-risk` (no login automation)
+- Curated interview stems shipped in `assets/questions/*.jsonl` plus user-imported JSONL (`import-questions --source local`)
 
 ## Not enabled by default
 
@@ -19,6 +20,7 @@
 - Bulk Levels.fyi / OfferShow reverse-engineered crawlers — use user gateway or `comp ingest-live` (see `docs/comp_live.md`)
 - Sending OpenTelemetry traces to a remote endpoint (opt-in via env)
 - Third-party Crawl4AI / JobSpy / Oxylabs as runtime dependencies (patterns may be ported first-party)
+- Vendoring unlicensed 面经 dumps (e.g. 0voice/interview_internal_reference) or bulk LeetCode solution trees
 
 ## Opt-in experimental (v0.12+)
 
